@@ -2,8 +2,8 @@
 Type system domain for runtime type representation.
 
 This module defines the runtime type representation system used for schema
-generation and type extraction. It includes primitive types, type definitions,
-and utilities for working with generic types.
+generation and type extraction. It uses concrete types rather than generic
+wrappers to provide clear, self-documenting type definitions.
 """
 
 from __future__ import annotations
@@ -13,13 +13,7 @@ from dataclasses import dataclass
 from typing import dataclass_transform, get_args, get_origin, Any, ClassVar
 
 # =============================================================================
-# Primitives
-# =============================================================================
-
-PRIMITIVES: frozenset[type] = frozenset({float, int, str, bool, type(None)})
-
-# =============================================================================
-# Type Definitions
+# Type Definition Base
 # =============================================================================
 
 @dataclass_transform(frozen_default=True)
@@ -31,40 +25,158 @@ class TypeDef:
 
     def __init_subclass__(cls, tag: str | None = None, **kwargs):
         super().__init_subclass__(**kwargs)
-        if not cls.__dict__.get("__annotations__"):
+        if "__annotations__" not in cls.__dict__:
             return
+        # dataclass returns a modified class - we don't need to reassign in __init_subclass__
+        # because it modifies the class in place, but we should still call it
         dataclass(frozen=True)(cls)
         cls._tag = tag or cls.__name__.lower().removesuffix("type")
         TypeDef._registry[cls._tag] = cls
 
 
-class PrimitiveType(TypeDef, tag="primitive"):
-    primitive: type
+# =============================================================================
+# Primitive Types (Concrete)
+# =============================================================================
 
+class IntType(TypeDef, tag="int"):
+    """Integer type."""
+    __annotations__ = {}  # Trigger dataclass conversion
+
+
+class FloatType(TypeDef, tag="float"):
+    """Floating point type."""
+    __annotations__ = {}  # Trigger dataclass conversion
+
+
+class StrType(TypeDef, tag="str"):
+    """String type."""
+    __annotations__ = {}  # Trigger dataclass conversion
+
+
+class BoolType(TypeDef, tag="bool"):
+    """Boolean type."""
+    __annotations__ = {}  # Trigger dataclass conversion
+
+
+class NoneType(TypeDef, tag="none"):
+    """None/null type."""
+    __annotations__ = {}  # Trigger dataclass conversion
+
+
+# =============================================================================
+# Container Types (Concrete)
+# =============================================================================
+
+class ListType(TypeDef, tag="list"):
+    """
+    List type with element type.
+
+    Example: list[int] → ListType(element=IntType())
+    """
+    element: TypeDef
+
+
+class DictType(TypeDef, tag="dict"):
+    """
+    Dictionary type with key and value types.
+
+    Example: dict[str, int] → DictType(key=StrType(), value=IntType())
+    """
+    key: TypeDef
+    value: TypeDef
+
+
+# =============================================================================
+# Domain Types
+# =============================================================================
 
 class NodeType(TypeDef, tag="node"):
+    """
+    AST Node type with return type.
+
+    Example: Node[float] → NodeType(returns=FloatType())
+    """
     returns: TypeDef
 
 
 class RefType(TypeDef, tag="ref"):
+    """
+    Reference type pointing to another type.
+
+    Example: Ref[Node[int]] → RefType(target=NodeType(returns=IntType()))
+    """
     target: TypeDef
 
 
 class UnionType(TypeDef, tag="union"):
+    """
+    Union of multiple types.
+
+    Example: int | str → UnionType(options=(IntType(), StrType()))
+    """
     options: tuple[TypeDef, ...]
 
 
-class GenericType(TypeDef, tag="generic"):
-    """Represents a generic/parameterized type."""
+class TypeParameter(TypeDef, tag="param"):
+    """
+    Type parameter in PEP 695 syntax.
+
+    Type parameters are the placeholders in generic definitions that get
+    substituted with concrete types when the generic is used.
+
+    Examples:
+        - class Foo[T]: ...         # T is an unbounded type parameter
+        - class Foo[T: int]: ...    # T is bounded (must be int or subtype)
+        - type Pair[T] = tuple[T, T]  # T is a type parameter in the alias
+    """
     name: str
-    origin: str  # Name of the generic origin (e.g., "list", "dict", "Ref")
-    args: tuple[TypeDef, ...]
+    bound: TypeDef | None = None  # Upper bound constraint (e.g., T: int)
 
 
-class TypeVarType(TypeDef, tag="typevar"):
-    """Represents a type variable with optional bounds."""
-    name: str
-    bounds: tuple[TypeDef, ...] | None = None
+# =============================================================================
+# Custom Type Registry
+# =============================================================================
+
+# Global registry for user-defined types
+# Maps Python marker classes to their TypeDef representations
+_CUSTOM_TYPE_REGISTRY: dict[type, type[TypeDef]] = {}
+
+
+def register_custom_type(python_type: type, typedef: type[TypeDef]) -> None:
+    """
+    Register a custom Python type to TypeDef mapping.
+
+    This allows DSL users to define custom types (like DataFrame, Matrix, etc.)
+    that can be used in type hints while maintaining IDE support.
+
+    Args:
+        python_type: The Python class to use as a type marker (e.g., DataFrame)
+        typedef: The TypeDef subclass for serialization (e.g., DataFrameType)
+
+    Example:
+        >>> class DataFrame:
+        ...     '''User-defined DataFrame type.'''
+        ...     pass
+        >>>
+        >>> class DataFrameType(TypeDef, tag="dataframe"):
+        ...     __annotations__ = {}
+        >>>
+        >>> register_custom_type(DataFrame, DataFrameType)
+        >>>
+        >>> # Now you can use it in your DSL:
+        >>> class FetchData(Node[DataFrame], tag="fetch"):
+        ...     query: str
+    """
+    _CUSTOM_TYPE_REGISTRY[python_type] = typedef
+
+
+def get_custom_type(python_type: type) -> type[TypeDef] | None:
+    """
+    Get the registered TypeDef for a Python type.
+
+    Returns None if the type is not registered.
+    """
+    return _CUSTOM_TYPE_REGISTRY.get(python_type)
 
 
 # =============================================================================

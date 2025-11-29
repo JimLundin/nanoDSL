@@ -15,15 +15,21 @@ from ezdsl.nodes import (
 from ezdsl.types import (
     # Type definitions
     TypeDef,
-    PrimitiveType,
+    IntType,
+    FloatType,
+    StrType,
+    BoolType,
+    NoneType,
+    ListType,
+    DictType,
     NodeType,
     RefType,
     UnionType,
-    GenericType,
-    TypeVarType,
+    TypeParameter,
 
-    # Constants
-    PRIMITIVES,
+    # Custom type registration
+    register_custom_type,
+    get_custom_type,
 )
 
 from ezdsl.serialization import (
@@ -55,12 +61,21 @@ __all__ = [
 
     # Type definitions
     "TypeDef",
-    "PrimitiveType",
+    "IntType",
+    "FloatType",
+    "StrType",
+    "BoolType",
+    "NoneType",
+    "ListType",
+    "DictType",
     "NodeType",
     "RefType",
     "UnionType",
-    "GenericType",
-    "TypeVarType",
+    "TypeParameter",
+
+    # Custom type registration
+    "register_custom_type",
+    "get_custom_type",
 
     # Serialization
     "to_dict",
@@ -72,7 +87,4 @@ __all__ = [
     "extract_type",
     "node_schema",
     "all_schemas",
-
-    # Constants
-    "PRIMITIVES",
 ]
