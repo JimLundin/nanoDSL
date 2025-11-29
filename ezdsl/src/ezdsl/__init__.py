@@ -21,9 +21,6 @@ from ezdsl.core import (
     GenericType,
     TypeVarType,
 
-    # Type alias registry
-    register_type_alias,
-
     # Serialization
     to_dict,
     from_dict,
@@ -55,9 +52,6 @@ __all__ = [
     "UnionType",
     "GenericType",
     "TypeVarType",
-
-    # Type alias registry
-    "register_type_alias",
 
     # Serialization
     "to_dict",

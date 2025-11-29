@@ -99,42 +99,51 @@ class Node[T]:
 # Type Alias Registry
 # =============================================================================
 
-from typing import Callable
+from typing import Callable, TypeAliasType
 
-# Registry for PEP 695 type alias extractors
-# Maps type alias name to extraction function
-_TYPE_ALIAS_REGISTRY: dict[str, Callable[[Any, tuple], TypeDef]] = {}
-
-
-def register_type_alias(name: str, extractor: Callable[[Any, tuple], TypeDef]) -> None:
+# Helper for type parameter substitution
+def _substitute_type_params(type_expr: Any, substitutions: dict[Any, Any]) -> Any:
     """
-    Register a custom type alias extractor.
+    Recursively substitute type parameters in a type expression.
 
     Args:
-        name: The name of the type alias (e.g., "Child", "NodeRef")
-        extractor: Function that takes (origin, args) and returns a TypeDef
+        type_expr: The type expression to substitute in
+        substitutions: Mapping from type parameters to their concrete types
+
+    Returns:
+        The type expression with parameters substituted
     """
-    _TYPE_ALIAS_REGISTRY[name] = extractor
+    import types
 
+    # If this is a type parameter, substitute it
+    if type_expr in substitutions:
+        return substitutions[type_expr]
 
-def _extract_child(origin: Any, args: tuple) -> TypeDef:
-    """Extract Child[T] = Node[T] | Ref[Node[T]]"""
-    if args:
-        inner = extract_type(args[0])
-        return UnionType((NodeType(inner), RefType(NodeType(inner))))
-    raise ValueError("Child requires a type argument")
+    # Get origin and args for generic types
+    origin = get_origin(type_expr)
+    args = get_args(type_expr)
 
+    # If no origin, this is a simple type - return as-is
+    if origin is None:
+        return type_expr
 
-def _extract_node_ref(origin: Any, args: tuple) -> TypeDef:
-    """Extract NodeRef[T] = Ref[Node[T]]"""
-    if args:
-        return RefType(NodeType(extract_type(args[0])))
-    raise ValueError("NodeRef requires a type argument")
+    # If there are no args, return as-is
+    if not args:
+        return type_expr
 
+    # Recursively substitute in the arguments
+    new_args = tuple(_substitute_type_params(arg, substitutions) for arg in args)
 
-# Register built-in type aliases
-register_type_alias("Child", _extract_child)
-register_type_alias("NodeRef", _extract_node_ref)
+    # Handle UnionType (created by | operator) specially
+    if isinstance(type_expr, types.UnionType):
+        # Reconstruct union using | operator
+        result = new_args[0]
+        for arg in new_args[1:]:
+            result = result | arg
+        return result
+
+    # Reconstruct the type with substituted arguments
+    return origin[new_args]
 
 
 # =============================================================================
@@ -217,11 +226,12 @@ def from_json(s: str) -> Node | Ref | TypeDef:
 def extract_type(py_type: Any) -> TypeDef:
     """Convert Python type annotation to TypeDef."""
     from typing import TypeVar
+    import types
 
     origin = get_origin(py_type)
     args = get_args(py_type)
 
-    # Handle TypeVar with bounds
+    # Handle TypeVar (old-style and PEP 695 type parameters)
     if isinstance(py_type, TypeVar):
         bounds = getattr(py_type, "__constraints__", None)
         if bounds:
@@ -237,11 +247,25 @@ def extract_type(py_type: Any) -> TypeDef:
             )
         return TypeVarType(name=py_type.__name__, bounds=None)
 
-    # PEP 695 type aliases - check registry first
-    if origin is not None and hasattr(origin, "__value__"):
-        name = getattr(origin, "__name__", None)
-        if name and name in _TYPE_ALIAS_REGISTRY:
-            return _TYPE_ALIAS_REGISTRY[name](origin, args)
+    # PEP 695 type aliases - automatically expand them
+    if isinstance(origin, TypeAliasType):
+        # Get the type parameters and create substitution mapping
+        type_params = getattr(origin, "__type_params__", ())
+        if len(type_params) != len(args):
+            raise ValueError(
+                f"Type alias {origin.__name__} expects {len(type_params)} "
+                f"arguments but got {len(args)}"
+            )
+
+        # Create substitution mapping: {T: int, U: str, ...}
+        substitutions = dict(zip(type_params, args))
+
+        # Get the template and substitute type parameters
+        template = origin.__value__
+        substituted = _substitute_type_params(template, substitutions)
+
+        # Extract the substituted type
+        return extract_type(substituted)
 
     # Primitives
     if py_type in PRIMITIVES:
@@ -258,8 +282,12 @@ def extract_type(py_type: Any) -> TypeDef:
     if origin is Ref:
         return RefType(extract_type(args[0]) if args else PrimitiveType(type(None)))
 
-    # Union types
+    # Union types (typing.Union)
     if origin is Union:
+        return UnionType(tuple(extract_type(a) for a in args))
+
+    # UnionType (types.UnionType, created by | operator in Python 3.10+)
+    if isinstance(py_type, types.UnionType):
         return UnionType(tuple(extract_type(a) for a in args))
 
     # Generic types (fallback for other parameterized types)
