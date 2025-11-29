@@ -1,7 +1,6 @@
 """Tests for ezdsl.types module."""
 
 import pytest
-from typing import TypeVar
 
 from ezdsl.types import (
     TypeDef,
@@ -11,8 +10,6 @@ from ezdsl.types import (
     UnionType,
     GenericType,
     TypeVarType,
-    TypeParamKind,
-    Variance,
     PRIMITIVES,
 )
 
@@ -32,38 +29,6 @@ class TestPrimitives:
         """Test that PRIMITIVES is immutable."""
         with pytest.raises((TypeError, AttributeError)):
             PRIMITIVES.add(list)
-
-
-class TestTypeParamKind:
-    """Test TypeParamKind enum."""
-
-    def test_typevar_kind(self):
-        """Test TYPEVAR kind."""
-        assert TypeParamKind.TYPEVAR.value == "typevar"
-
-    def test_paramspec_kind(self):
-        """Test PARAMSPEC kind."""
-        assert TypeParamKind.PARAMSPEC.value == "paramspec"
-
-    def test_typevartuple_kind(self):
-        """Test TYPEVARTUPLE kind."""
-        assert TypeParamKind.TYPEVARTUPLE.value == "typevartuple"
-
-
-class TestVariance:
-    """Test Variance enum."""
-
-    def test_invariant(self):
-        """Test INVARIANT variance."""
-        assert Variance.INVARIANT.value == "invariant"
-
-    def test_covariant(self):
-        """Test COVARIANT variance."""
-        assert Variance.COVARIANT.value == "covariant"
-
-    def test_contravariant(self):
-        """Test CONTRAVARIANT variance."""
-        assert Variance.CONTRAVARIANT.value == "contravariant"
 
 
 class TestPrimitiveType:
@@ -161,55 +126,18 @@ class TestTypeVarType:
     """Test TypeVarType."""
 
     def test_typevar_type_basic(self):
-        """Test creating a basic TypeVarType."""
+        """Test creating a basic TypeVarType (unbounded)."""
         tvt = TypeVarType(name="T")
         assert tvt.name == "T"
-        assert tvt.kind == TypeParamKind.TYPEVAR
-        assert tvt.variance == Variance.INVARIANT
-        assert tvt.bounds is None
-        assert tvt.constraints is None
-        assert tvt.default is None
+        assert tvt.bound is None
         assert tvt._tag == "typevar"
 
-    def test_typevar_type_with_bounds(self):
-        """Test TypeVarType with bounds."""
-        bounds = (PrimitiveType(int),)
-        tvt = TypeVarType(name="T", bounds=bounds)
+    def test_typevar_type_with_bound(self):
+        """Test TypeVarType with bound (like T: int)."""
+        bound = PrimitiveType(int)
+        tvt = TypeVarType(name="T", bound=bound)
         assert tvt.name == "T"
-        assert tvt.bounds == bounds
-
-    def test_typevar_type_with_constraints(self):
-        """Test TypeVarType with constraints."""
-        constraints = (PrimitiveType(int), PrimitiveType(str))
-        tvt = TypeVarType(name="T", constraints=constraints)
-        assert tvt.name == "T"
-        assert tvt.constraints == constraints
-
-    def test_typevar_type_covariant(self):
-        """Test covariant TypeVarType."""
-        tvt = TypeVarType(name="T_co", variance=Variance.COVARIANT)
-        assert tvt.variance == Variance.COVARIANT
-
-    def test_typevar_type_contravariant(self):
-        """Test contravariant TypeVarType."""
-        tvt = TypeVarType(name="T_contra", variance=Variance.CONTRAVARIANT)
-        assert tvt.variance == Variance.CONTRAVARIANT
-
-    def test_typevar_type_paramspec(self):
-        """Test ParamSpec kind."""
-        tvt = TypeVarType(name="P", kind=TypeParamKind.PARAMSPEC)
-        assert tvt.kind == TypeParamKind.PARAMSPEC
-
-    def test_typevar_type_typevartuple(self):
-        """Test TypeVarTuple kind."""
-        tvt = TypeVarType(name="Ts", kind=TypeParamKind.TYPEVARTUPLE)
-        assert tvt.kind == TypeParamKind.TYPEVARTUPLE
-
-    def test_typevar_type_with_default(self):
-        """Test TypeVarType with default."""
-        default = PrimitiveType(int)
-        tvt = TypeVarType(name="T", default=default)
-        assert tvt.default == default
+        assert tvt.bound == bound
 
     def test_typevar_type_frozen(self):
         """Test that TypeVarType is immutable."""

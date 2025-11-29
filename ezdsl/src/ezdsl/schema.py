@@ -8,9 +8,8 @@ type information for validation, documentation, and tooling support.
 from __future__ import annotations
 
 from dataclasses import fields as dc_fields
-from typing import get_args, get_origin, get_type_hints, Any, Union, TypeAliasType, TypeVar, ParamSpec
+from typing import get_args, get_origin, get_type_hints, Any, Union, TypeAliasType, TypeVar
 import types
-import sys
 
 from ezdsl.nodes import Node, Ref
 from ezdsl.types import (
@@ -21,17 +20,9 @@ from ezdsl.types import (
     UnionType,
     GenericType,
     TypeVarType,
-    TypeParamKind,
-    Variance,
     PRIMITIVES,
     _substitute_type_params,
 )
-
-# Check if TypeVarTuple is available (Python 3.11+)
-if sys.version_info >= (3, 11):
-    from typing import TypeVarTuple
-else:
-    TypeVarTuple = None
 from ezdsl.serialization import to_dict
 
 # =============================================================================
@@ -43,24 +34,12 @@ def extract_type(py_type: Any) -> TypeDef:
     origin = get_origin(py_type)
     args = get_args(py_type)
 
-    # Handle TypeVar (old-style and PEP 695 type parameters)
+    # Handle TypeVar (PEP 695 type parameters like class Foo[T]: ...)
     if isinstance(py_type, TypeVar):
-        return _extract_typevar(py_type)
-
-    # Handle ParamSpec (PEP 612)
-    if isinstance(py_type, ParamSpec):
+        bound = getattr(py_type, "__bound__", None)
         return TypeVarType(
             name=py_type.__name__,
-            kind=TypeParamKind.PARAMSPEC,
-            variance=Variance.INVARIANT,
-        )
-
-    # Handle TypeVarTuple (PEP 646, Python 3.11+)
-    if TypeVarTuple is not None and isinstance(py_type, TypeVarTuple):
-        return TypeVarType(
-            name=py_type.__name__,
-            kind=TypeParamKind.TYPEVARTUPLE,
-            variance=Variance.INVARIANT,
+            bound=extract_type(bound) if bound is not None else None
         )
 
     # PEP 695 type aliases - automatically expand them
@@ -122,50 +101,6 @@ def extract_type(py_type: Any) -> TypeDef:
         )
 
     raise ValueError(f"Cannot extract type from: {py_type}")
-
-
-def _extract_typevar(typevar: TypeVar) -> TypeVarType:
-    """Extract TypeVar metadata into TypeVarType."""
-    # Determine variance
-    variance = Variance.INVARIANT
-    if getattr(typevar, "__covariant__", False):
-        variance = Variance.COVARIANT
-    elif getattr(typevar, "__contravariant__", False):
-        variance = Variance.CONTRAVARIANT
-
-    # Extract constraints (mutually exclusive with bounds)
-    constraints_tuple = getattr(typevar, "__constraints__", ())
-    constraints = None
-    if constraints_tuple:
-        constraints = tuple(extract_type(c) for c in constraints_tuple)
-
-    # Extract bound (mutually exclusive with constraints)
-    bound = getattr(typevar, "__bound__", None)
-    bounds = None
-    if bound is not None:
-        bounds = (extract_type(bound),)
-
-    # Extract default (Python 3.13+)
-    default = None
-    if hasattr(typevar, "__default__"):
-        default_value = getattr(typevar, "__default__")
-        # Check if default is actually set (not the sentinel)
-        try:
-            from typing import NoDefault
-            if default_value is not NoDefault:
-                default = extract_type(default_value)
-        except ImportError:
-            # Python < 3.13, no default support
-            pass
-
-    return TypeVarType(
-        name=typevar.__name__,
-        kind=TypeParamKind.TYPEVAR,
-        variance=variance,
-        bounds=bounds,
-        constraints=constraints,
-        default=default,
-    )
 
 
 def _extract_generic_origin(origin: Any) -> TypeDef:

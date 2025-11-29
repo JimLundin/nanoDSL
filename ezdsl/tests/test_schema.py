@@ -2,9 +2,9 @@
 
 import sys
 import pytest
-from typing import TypeVar, Union, ParamSpec
+from typing import TypeVar, Union
 
-from ezdsl.schema import extract_type, _extract_typevar, _extract_generic_origin
+from ezdsl.schema import extract_type, _extract_generic_origin
 from ezdsl.types import (
     PrimitiveType,
     NodeType,
@@ -12,21 +12,10 @@ from ezdsl.types import (
     UnionType,
     GenericType,
     TypeVarType,
-    TypeParamKind,
-    Variance,
 )
 
 # Check Python version for version-specific tests
-PYTHON_311_PLUS = sys.version_info >= (3, 11)
 PYTHON_312_PLUS = sys.version_info >= (3, 12)
-PYTHON_313_PLUS = sys.version_info >= (3, 13)
-
-# Import version-specific types
-if PYTHON_311_PLUS:
-    from typing import TypeVarTuple
-
-if PYTHON_312_PLUS:
-    from typing import TypeAliasType
 
 
 class TestExtractPrimitives:
@@ -64,75 +53,25 @@ class TestExtractPrimitives:
 
 
 class TestExtractTypeVar:
-    """Test extracting TypeVar."""
+    """Test extracting TypeVar (PEP 695 type parameters)."""
 
     def test_extract_simple_typevar(self):
-        """Test extracting a simple TypeVar."""
+        """Test extracting an unbounded TypeVar."""
         T = TypeVar("T")
         result = extract_type(T)
         assert isinstance(result, TypeVarType)
         assert result.name == "T"
-        assert result.kind == TypeParamKind.TYPEVAR
-        assert result.variance == Variance.INVARIANT
-        assert result.bounds is None
-        assert result.constraints is None
+        assert result.bound is None
 
     def test_extract_bounded_typevar(self):
-        """Test extracting a TypeVar with bounds."""
+        """Test extracting a TypeVar with bound (like T: int)."""
         T = TypeVar("T", bound=int)
         result = extract_type(T)
         assert isinstance(result, TypeVarType)
         assert result.name == "T"
-        assert result.bounds is not None
-        assert len(result.bounds) == 1
-        assert isinstance(result.bounds[0], PrimitiveType)
-        assert result.bounds[0].primitive == int
-
-    def test_extract_constrained_typevar(self):
-        """Test extracting a TypeVar with constraints."""
-        T = TypeVar("T", int, str)
-        result = extract_type(T)
-        assert isinstance(result, TypeVarType)
-        assert result.name == "T"
-        assert result.constraints is not None
-        assert len(result.constraints) == 2
-        assert isinstance(result.constraints[0], PrimitiveType)
-        assert result.constraints[0].primitive == int
-        assert isinstance(result.constraints[1], PrimitiveType)
-        assert result.constraints[1].primitive == str
-
-    def test_extract_covariant_typevar(self):
-        """Test extracting a covariant TypeVar."""
-        T_co = TypeVar("T_co", covariant=True)
-        result = extract_type(T_co)
-        assert isinstance(result, TypeVarType)
-        assert result.name == "T_co"
-        assert result.variance == Variance.COVARIANT
-
-    def test_extract_contravariant_typevar(self):
-        """Test extracting a contravariant TypeVar."""
-        T_contra = TypeVar("T_contra", contravariant=True)
-        result = extract_type(T_contra)
-        assert isinstance(result, TypeVarType)
-        assert result.name == "T_contra"
-        assert result.variance == Variance.CONTRAVARIANT
-
-    def test_extract_paramspec(self):
-        """Test extracting a ParamSpec."""
-        P = ParamSpec("P")
-        result = extract_type(P)
-        assert isinstance(result, TypeVarType)
-        assert result.name == "P"
-        assert result.kind == TypeParamKind.PARAMSPEC
-
-    @pytest.mark.skipif(not PYTHON_311_PLUS, reason="TypeVarTuple requires Python 3.11+")
-    def test_extract_typevartuple(self):
-        """Test extracting a TypeVarTuple."""
-        Ts = TypeVarTuple("Ts")
-        result = extract_type(Ts)
-        assert isinstance(result, TypeVarType)
-        assert result.name == "Ts"
-        assert result.kind == TypeParamKind.TYPEVARTUPLE
+        assert result.bound is not None
+        assert isinstance(result.bound, PrimitiveType)
+        assert result.bound.primitive == int
 
 
 class TestExtractUnion:
@@ -238,44 +177,6 @@ class TestPEP695TypeAlias:
         assert len(result.args) == 2
         assert result.args[0].primitive == int
         assert result.args[1].primitive == int
-
-
-class TestExtractTypeVarHelper:
-    """Test _extract_typevar helper function."""
-
-    def test_extract_typevar_simple(self):
-        """Test extracting simple TypeVar."""
-        T = TypeVar("T")
-        result = _extract_typevar(T)
-        assert result.name == "T"
-        assert result.variance == Variance.INVARIANT
-
-    def test_extract_typevar_covariant(self):
-        """Test extracting covariant TypeVar."""
-        T_co = TypeVar("T_co", covariant=True)
-        result = _extract_typevar(T_co)
-        assert result.variance == Variance.COVARIANT
-
-    def test_extract_typevar_contravariant(self):
-        """Test extracting contravariant TypeVar."""
-        T_contra = TypeVar("T_contra", contravariant=True)
-        result = _extract_typevar(T_contra)
-        assert result.variance == Variance.CONTRAVARIANT
-
-    def test_extract_typevar_with_bound(self):
-        """Test extracting TypeVar with bound."""
-        T = TypeVar("T", bound=int)
-        result = _extract_typevar(T)
-        assert result.bounds is not None
-        assert len(result.bounds) == 1
-        assert result.bounds[0].primitive == int
-
-    def test_extract_typevar_with_constraints(self):
-        """Test extracting TypeVar with constraints."""
-        T = TypeVar("T", int, str, float)
-        result = _extract_typevar(T)
-        assert result.constraints is not None
-        assert len(result.constraints) == 3
 
 
 class TestExtractGenericOrigin:
