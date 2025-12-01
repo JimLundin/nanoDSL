@@ -11,14 +11,15 @@ from dataclasses import fields as dc_fields
 from typing import get_origin, Any
 import json
 
-from ezdsl.nodes import Node, Ref
-from ezdsl.types import TypeDef
+from nanodsl.nodes import Node, Ref
+from nanodsl.types import TypeDef
 
 # =============================================================================
 # Serialization
 # =============================================================================
 
-def to_dict(obj: Node | Ref | TypeDef) -> dict:
+
+def to_dict(obj: Node[Any] | Ref[Any] | TypeDef) -> dict:
     """Serialize to dict."""
     if isinstance(obj, Ref):
         return {"tag": "ref", "id": obj.id}

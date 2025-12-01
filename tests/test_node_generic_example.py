@@ -1,10 +1,9 @@
 """Test real-world example of generic Node with type parameter serialization."""
 
-import pytest
 from typing import TypeVar
 
-from ezdsl.schema import extract_type
-from ezdsl.types import (
+from nanodsl.schema import extract_type
+from nanodsl.types import (
     ListType,
     DictType,
     IntType,

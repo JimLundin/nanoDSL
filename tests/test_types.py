@@ -1,8 +1,8 @@
-"""Tests for ezdsl.types module."""
+"""Tests for nanodsl.types module."""
 
 import pytest
 
-from ezdsl.types import (
+from nanodsl.types import (
     TypeDef,
     IntType,
     FloatType,
@@ -200,20 +200,19 @@ class TestNestedTypes:
 
     def test_dict_of_lists(self):
         """Test creating dict[str, list[int]]."""
-        dt = DictType(
-            key=StrType(),
-            value=ListType(element=IntType())
-        )
+        dt = DictType(key=StrType(), value=ListType(element=IntType()))
         assert isinstance(dt.key, StrType)
         assert isinstance(dt.value, ListType)
         assert isinstance(dt.value.element, IntType)
 
     def test_union_of_containers(self):
         """Test creating list[int] | dict[str, float]."""
-        ut = UnionType(options=(
-            ListType(element=IntType()),
-            DictType(key=StrType(), value=FloatType())
-        ))
+        ut = UnionType(
+            options=(
+                ListType(element=IntType()),
+                DictType(key=StrType(), value=FloatType()),
+            )
+        )
         assert len(ut.options) == 2
         assert isinstance(ut.options[0], ListType)
         assert isinstance(ut.options[1], DictType)

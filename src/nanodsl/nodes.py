@@ -8,20 +8,18 @@ and generic type parameters. Nodes are immutable and type-safe.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import dataclass_transform, ClassVar
+from typing import dataclass_transform, ClassVar, Any
 
 # =============================================================================
 # Core Types
 # =============================================================================
 
+
 @dataclass(frozen=True)
 class Ref[X]:
     """Reference to X by ID."""
+
     id: str
-
-
-type NodeRef[T] = Ref[Node[T]]
-type Child[T] = Node[T] | Ref[Node[T]]
 
 
 @dataclass_transform(frozen_default=True)
@@ -30,9 +28,15 @@ class Node[T]:
 
     _tag: ClassVar[str]
     _namespace: ClassVar[str]
-    _registry: ClassVar[dict[str, type[Node]]] = {}
+    _registry: ClassVar[dict[str, type[Node[Any]]]] = {}
 
-    def __init_subclass__(cls, tag: str | None = None, namespace: str | None = None, frozen: bool = True, **kwargs):
+    def __init_subclass__(
+        cls,
+        tag: str | None = None,
+        namespace: str | None = None,
+        frozen: bool = True,
+        **kwargs,
+    ):
         super().__init_subclass__(**kwargs)
         if not cls.__dict__.get("__annotations__"):
             return
@@ -55,3 +59,7 @@ class Node[T]:
                 )
 
         Node._registry[cls._tag] = cls
+
+
+type NodeRef[T] = Ref[Node[T]]
+type Child[T] = Node[T] | Ref[Node[T]]

@@ -8,11 +8,18 @@ type information for validation, documentation, and tooling support.
 from __future__ import annotations
 
 from dataclasses import fields as dc_fields
-from typing import get_args, get_origin, get_type_hints, Any, Union, TypeAliasType, TypeVar
+from typing import (
+    get_args,
+    get_origin,
+    get_type_hints,
+    Any,
+    TypeAliasType,
+    TypeVar,
+)
 import types
 
-from ezdsl.nodes import Node, Ref
-from ezdsl.types import (
+from nanodsl.nodes import Node, Ref
+from nanodsl.types import (
     TypeDef,
     IntType,
     FloatType,
@@ -27,11 +34,12 @@ from ezdsl.types import (
     TypeParameter,
     _substitute_type_params,
 )
-from ezdsl.serialization import to_dict
+from nanodsl.serialization import to_dict
 
 # =============================================================================
 # Schema Extraction
 # =============================================================================
+
 
 def extract_type(py_type: Any) -> TypeDef:
     """Convert Python type annotation to TypeDef."""
@@ -43,7 +51,7 @@ def extract_type(py_type: Any) -> TypeDef:
         bound = getattr(py_type, "__bound__", None)
         return TypeParameter(
             name=py_type.__name__,
-            bound=extract_type(bound) if bound is not None else None
+            bound=extract_type(bound) if bound is not None else None,
         )
 
     # Handle custom user-defined types
@@ -105,10 +113,6 @@ def extract_type(py_type: Any) -> TypeDef:
     if origin is Ref:
         return RefType(extract_type(args[0]) if args else NoneType())
 
-    # Union types (typing.Union)
-    if origin is Union:
-        return UnionType(tuple(extract_type(a) for a in args))
-
     # UnionType (types.UnionType, created by | operator in Python 3.10+)
     if isinstance(py_type, types.UnionType):
         return UnionType(tuple(extract_type(a) for a in args))
@@ -116,7 +120,7 @@ def extract_type(py_type: Any) -> TypeDef:
     raise ValueError(f"Cannot extract type from: {py_type}")
 
 
-def _extract_node_returns(cls: type[Node]) -> TypeDef:
+def _extract_node_returns(cls: type[Node[Any]]) -> TypeDef:
     """Extract the return type from a Node class definition."""
     for base in getattr(cls, "__orig_bases__", ()):
         origin = get_origin(base)
@@ -127,7 +131,7 @@ def _extract_node_returns(cls: type[Node]) -> TypeDef:
     return NoneType()
 
 
-def node_schema(cls: type[Node]) -> dict:
+def node_schema(cls: type[Node[Any]]) -> dict:
     """Get schema for a node class."""
     hints = get_type_hints(cls)
     return {

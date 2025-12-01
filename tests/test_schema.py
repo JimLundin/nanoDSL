@@ -1,11 +1,11 @@
-"""Tests for ezdsl.schema module."""
+"""Tests for nanodsl.schema module."""
 
 import sys
+from typing import TypeVar
 import pytest
-from typing import TypeVar, Union
 
-from ezdsl.schema import extract_type
-from ezdsl.types import (
+from nanodsl.schema import extract_type
+from nanodsl.types import (
     IntType,
     FloatType,
     StrType,
@@ -75,14 +75,6 @@ class TestExtractTypeParameter:
 
 class TestExtractUnion:
     """Test extracting Union types."""
-
-    def test_extract_union_typing(self):
-        """Test extracting Union from typing module."""
-        result = extract_type(Union[int, str])
-        assert isinstance(result, UnionType)
-        assert len(result.options) == 2
-        assert isinstance(result.options[0], IntType)
-        assert isinstance(result.options[1], StrType)
 
     def test_extract_union_pipe(self):
         """Test extracting Union with | operator."""

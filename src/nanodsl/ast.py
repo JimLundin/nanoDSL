@@ -9,25 +9,31 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
+from typing import Any
 
-from ezdsl.nodes import Node, Ref
-from ezdsl.serialization import to_dict, from_dict
+from nanodsl.nodes import Node, Ref
+from nanodsl.serialization import to_dict, from_dict
 
 # =============================================================================
 # AST Container
 # =============================================================================
 
+
 @dataclass
 class AST:
     """Flat AST with nodes stored by ID."""
+
     root: str
-    nodes: dict[str, Node]
+    nodes: dict[str, Node[Any]]
 
     def resolve[X](self, ref: Ref[X]) -> X:
         return self.nodes[ref.id]
 
     def to_dict(self) -> dict:
-        return {"root": self.root, "nodes": {k: to_dict(v) for k, v in self.nodes.items()}}
+        return {
+            "root": self.root,
+            "nodes": {k: to_dict(v) for k, v in self.nodes.items()},
+        }
 
     def to_json(self) -> str:
         return json.dumps(self.to_dict(), indent=2)
