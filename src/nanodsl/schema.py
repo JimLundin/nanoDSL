@@ -36,8 +36,8 @@ from nanodsl.types import (
     NodeType,
     RefType,
     UnionType,
-    TypeVar,
-    TypeVarRef,
+    TypeParameter,
+    TypeParameterRef,
     _substitute_type_params,
 )
 from nanodsl.serialization import to_dict
@@ -53,9 +53,10 @@ def extract_type(py_type: Any) -> TypeDef:
     args = get_args(py_type)
 
     # Handle typing.TypeVar (PEP 695 type parameters like class Foo[T]: ...)
+    # Note: Even with PEP 695 syntax, Python internally uses typing.TypeVar
     if isinstance(py_type, TypingTypeVar):
         bound = getattr(py_type, "__bound__", None)
-        return TypeVar(
+        return TypeParameter(
             name=py_type.__name__,
             bound=extract_type(bound) if bound is not None else None,
         )

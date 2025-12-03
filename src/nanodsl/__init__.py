@@ -28,8 +28,8 @@ from nanodsl.types import (
     NodeType,
     RefType,
     UnionType,
-    TypeVar,
-    TypeVarRef,
+    TypeParameter,
+    TypeParameterRef,
 )
 
 from nanodsl.serialization import (
@@ -73,8 +73,8 @@ __all__ = [
     "NodeType",
     "RefType",
     "UnionType",
-    "TypeVar",
-    "TypeVarRef",
+    "TypeParameter",
+    "TypeParameterRef",
     # Serialization
     "to_dict",
     "from_dict",

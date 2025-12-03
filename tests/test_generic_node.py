@@ -1,6 +1,6 @@
 """Tests for how generic Node definitions serialize their types."""
 
-from typing import TypeVar as TypingTypeVar
+from typing import TypeVar
 
 from nanodsl.schema import extract_type
 from nanodsl.types import (
@@ -9,7 +9,7 @@ from nanodsl.types import (
     IntType,
     StrType,
     FloatType,
-    TypeVar,
+    TypeParameter,
 )
 
 
@@ -17,7 +17,7 @@ def test_type_parameter_in_annotation():
     """Test extracting a type annotation that uses a type parameter."""
     # Simulate: class MyNode[T]:
     #               args: list[T]
-    T = TypingTypeVar("T")
+    T = TypeVar("T")
 
     # What does list[T] extract to?
     result = extract_type(list[T])
@@ -25,7 +25,7 @@ def test_type_parameter_in_annotation():
     assert isinstance(result, ListType)
 
     # The element is the TypeVar T, not a concrete type!
-    assert isinstance(result.element, TypeVar)
+    assert isinstance(result.element, TypeParameter)
     assert result.element.name == "T"
 
 
@@ -33,7 +33,7 @@ def test_nested_type_parameters():
     """Test extracting nested parameterized types with type parameters."""
     # Simulate: class MyNode[T]:
     #               args: list[dict[str, T]]
-    T = TypingTypeVar("T")
+    T = TypeVar("T")
 
     result = extract_type(list[dict[str, T]])
 
@@ -48,7 +48,7 @@ def test_nested_type_parameters():
     assert isinstance(dict_type.key, StrType)
 
     # Second arg of dict is T (type parameter)
-    assert isinstance(dict_type.value, TypeVar)
+    assert isinstance(dict_type.value, TypeParameter)
     assert dict_type.value.name == "T"
 
 
@@ -56,11 +56,11 @@ def test_bounded_type_parameter_in_annotation():
     """Test extracting type annotations with bounded type parameters."""
     # Simulate: class MyNode[T: int]:
     #               value: T
-    T = TypingTypeVar("T", bound=int)
+    T = TypeVar("T", bound=int)
 
     result = extract_type(T)
 
-    assert isinstance(result, TypeVar)
+    assert isinstance(result, TypeParameter)
     assert result.name == "T"
     assert result.bound is not None
     assert isinstance(result.bound, IntType)
@@ -70,16 +70,16 @@ def test_multiple_type_parameters():
     """Test multiple type parameters in one annotation."""
     # Simulate: class MyNode[K, V]:
     #               data: dict[K, V]
-    K = TypingTypeVar("K")
-    V = TypingTypeVar("V")
+    K = TypeVar("K")
+    V = TypeVar("V")
 
     result = extract_type(dict[K, V])
 
     assert isinstance(result, DictType)
 
     # Both key and value are type parameters
-    assert isinstance(result.key, TypeVar)
+    assert isinstance(result.key, TypeParameter)
     assert result.key.name == "K"
 
-    assert isinstance(result.value, TypeVar)
+    assert isinstance(result.value, TypeParameter)
     assert result.value.name == "V"

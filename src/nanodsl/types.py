@@ -277,15 +277,15 @@ class UnionType(TypeDef, tag="union"):
     options: tuple[TypeDef, ...]
 
 
-class TypeVar(TypeDef, tag="typevar"):
+class TypeParameter(TypeDef, tag="typeparam"):
     """
-    Type variable declaration in PEP 695 generic definitions.
+    Type parameter declaration in PEP 695 generic definitions.
 
-    Represents the DECLARATION of a type variable (e.g., in class Foo[T]).
+    Represents the DECLARATION of a type parameter (e.g., in class Foo[T]).
 
     Examples:
-        class Foo[T]: ... → TypeVar(name="T", bound=None)
-        class Foo[T: int | float]: ... → TypeVar(name="T", bound=UnionType(...))
+        class Foo[T]: ... → TypeParameter(name="T", bound=None)
+        class Foo[T: int | float]: ... → TypeParameter(name="T", bound=UnionType(...))
 
     This is the definition site of the type parameter.
     """
@@ -294,18 +294,18 @@ class TypeVar(TypeDef, tag="typevar"):
     bound: TypeDef | None = None
 
 
-class TypeVarRef(TypeDef, tag="typevarref"):
+class TypeParameterRef(TypeDef, tag="typeparamref"):
     """
-    Reference to a type variable within a type expression.
+    Reference to a type parameter within a type expression.
 
-    Represents a USE of a type variable (e.g., in field: T).
+    Represents a USE of a type parameter (e.g., in field: T).
 
     Examples:
         In class Foo[T]:
-            field: T → TypeVarRef(name="T")
-            field: list[T] → ListType(element=TypeVarRef(name="T"))
+            field: T → TypeParameterRef(name="T")
+            field: list[T] → ListType(element=TypeParameterRef(name="T"))
 
-    This is the use site that refers back to the TypeVar declaration.
+    This is the use site that refers back to the TypeParameter declaration.
     """
 
     name: str

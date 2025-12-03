@@ -1,6 +1,6 @@
 """Test real-world example of generic Node with type parameter serialization."""
 
-from typing import TypeVar as TypingTypeVar
+from typing import TypeVar
 
 from nanodsl.schema import extract_type
 from nanodsl.types import (
@@ -11,7 +11,7 @@ from nanodsl.types import (
     FloatType,
     NodeType,
     RefType,
-    TypeVar,
+    TypeParameter,
 )
 
 
@@ -31,7 +31,7 @@ def test_generic_node_field_extraction():
     #     items: list[T]
 
     # Let's manually extract what list[T] would look like
-    T = TypingTypeVar("T")
+    T = TypeVar("T")
 
     items_type = extract_type(list[T])
 
@@ -39,7 +39,7 @@ def test_generic_node_field_extraction():
     assert isinstance(items_type, ListType)
 
     # The element is a TypeVar (the placeholder T), not a concrete type
-    assert isinstance(items_type.element, TypeVar)
+    assert isinstance(items_type.element, TypeParameter)
     assert items_type.element.name == "T"
 
 
@@ -54,7 +54,7 @@ def test_complex_generic_node_field():
         - key: StrType
         - value: TypeVar(name="T")
     """
-    T = TypingTypeVar("T")
+    T = TypeVar("T")
 
     # Build the type annotation: list[dict[str, T]]
     result = extract_type(list[dict[str, T]])
@@ -70,7 +70,7 @@ def test_complex_generic_node_field():
     assert isinstance(dict_type.key, StrType)
 
     # dict's second arg: T (type parameter)
-    assert isinstance(dict_type.value, TypeVar)
+    assert isinstance(dict_type.value, TypeParameter)
     assert dict_type.value.name == "T"
     assert dict_type.value.bound is None
 
@@ -82,11 +82,11 @@ def test_bounded_type_parameter_in_generic_node():
 
     The TypeVar should capture the bound.
     """
-    T = TypingTypeVar("T", bound=float)
+    T = TypeVar("T", bound=float)
 
     result = extract_type(T)
 
-    assert isinstance(result, TypeVar)
+    assert isinstance(result, TypeParameter)
     assert result.name == "T"
     assert result.bound is not None
     assert isinstance(result.bound, FloatType)
@@ -98,12 +98,12 @@ def test_type_parameter_vs_concrete_type():
     1. A type parameter (T in class definition)
     2. A concrete type argument (int when using the class)
     """
-    T = TypingTypeVar("T")
+    T = TypeVar("T")
 
     # In the class definition: list[T]
     generic_form = extract_type(list[T])
     assert isinstance(generic_form, ListType)
-    assert isinstance(generic_form.element, TypeVar)  # T is a parameter
+    assert isinstance(generic_form.element, TypeParameter)  # T is a parameter
     assert generic_form.element.name == "T"
 
     # When using the class: list[int]

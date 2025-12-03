@@ -1,7 +1,7 @@
 """Tests for nanodsl.schema module."""
 
 import sys
-from typing import TypeVar as TypingTypeVar
+from typing import TypeVar
 import pytest
 
 from nanodsl.schema import extract_type
@@ -16,7 +16,7 @@ from nanodsl.types import (
     NodeType,
     RefType,
     UnionType,
-    TypeVar,
+    TypeParameter,
 )
 
 # Check Python version for version-specific tests
@@ -52,22 +52,22 @@ class TestExtractPrimitives:
         assert isinstance(result, NoneType)
 
 
-class TestExtractTypeVar:
+class TestExtractTypeParameter:
     """Test extracting TypeVar (PEP 695 type parameters)."""
 
     def test_extract_simple_type_parameter(self):
         """Test extracting an unbounded TypeVar."""
-        T = TypingTypeVar("T")
+        T = TypeVar("T")
         result = extract_type(T)
-        assert isinstance(result, TypeVar)
+        assert isinstance(result, TypeParameter)
         assert result.name == "T"
         assert result.bound is None
 
     def test_extract_bounded_type_parameter(self):
         """Test extracting a TypeVar with bound (like T: int)."""
-        T = TypingTypeVar("T", bound=int)
+        T = TypeVar("T", bound=int)
         result = extract_type(T)
-        assert isinstance(result, TypeVar)
+        assert isinstance(result, TypeParameter)
         assert result.name == "T"
         assert result.bound is not None
         assert isinstance(result.bound, IntType)
@@ -136,33 +136,33 @@ class TestExtractContainers:
         assert isinstance(result.element.value, IntType)
 
 
-class TestExtractWithTypeVars:
+class TestExtractWithTypeParameters:
     """Test extracting types with type parameters."""
 
     def test_extract_list_with_type_parameter(self):
         """Test extracting list[T] where T is a type parameter."""
-        T = TypingTypeVar("T")
+        T = TypeVar("T")
         result = extract_type(list[T])
         assert isinstance(result, ListType)
-        assert isinstance(result.element, TypeVar)
+        assert isinstance(result.element, TypeParameter)
         assert result.element.name == "T"
 
     def test_extract_dict_with_type_parameter(self):
         """Test extracting dict[str, T] where T is a type parameter."""
-        T = TypingTypeVar("T")
+        T = TypeVar("T")
         result = extract_type(dict[str, T])
         assert isinstance(result, DictType)
         assert isinstance(result.key, StrType)
-        assert isinstance(result.value, TypeVar)
+        assert isinstance(result.value, TypeParameter)
         assert result.value.name == "T"
 
     def test_extract_nested_with_type_parameter(self):
         """Test extracting list[dict[str, T]]."""
-        T = TypingTypeVar("T")
+        T = TypeVar("T")
         result = extract_type(list[dict[str, T]])
         assert isinstance(result, ListType)
         assert isinstance(result.element, DictType)
-        assert isinstance(result.element.value, TypeVar)
+        assert isinstance(result.element.value, TypeParameter)
         assert result.element.value.name == "T"
 
 
