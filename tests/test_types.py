@@ -14,7 +14,7 @@ from nanodsl.types import (
     NodeType,
     RefType,
     UnionType,
-    TypeParameter,
+    TypeVar,
 )
 
 
@@ -132,26 +132,26 @@ class TestUnionType:
             ut.options = (FloatType(),)
 
 
-class TestTypeParameter:
-    """Test TypeParameter."""
+class TestTypeVar:
+    """Test TypeVar."""
 
     def test_type_parameter_basic(self):
-        """Test creating a basic TypeParameter (unbounded)."""
-        tp = TypeParameter(name="T")
+        """Test creating a basic TypeVar (unbounded)."""
+        tp = TypeVar(name="T")
         assert tp.name == "T"
         assert tp.bound is None
         assert tp._tag == "typevar"
 
     def test_type_parameter_with_bound(self):
-        """Test TypeParameter with bound (like T: int)."""
+        """Test TypeVar with bound (like T: int)."""
         bound = IntType()
-        tp = TypeParameter(name="T", bound=bound)
+        tp = TypeVar(name="T", bound=bound)
         assert tp.name == "T"
         assert isinstance(tp.bound, IntType)
 
     def test_type_parameter_frozen(self):
-        """Test that TypeParameter is immutable."""
-        tp = TypeParameter(name="T")
+        """Test that TypeVar is immutable."""
+        tp = TypeVar(name="T")
         with pytest.raises((AttributeError, TypeError)):
             tp.name = "U"
 
@@ -189,8 +189,8 @@ class TestTypeDefRegistry:
         assert TypeDef._registry["node"] == NodeType
         assert TypeDef._registry["ref"] == RefType
         assert TypeDef._registry["union"] == UnionType
-        # TypeParameter is an alias for TypeVar, both map to the same class
-        assert TypeDef._registry["typevar"] == TypeParameter
+        # TypeVar is an alias for TypeVar, both map to the same class
+        assert TypeDef._registry["typevar"] == TypeVar
 
 
 class TestNestedTypes:

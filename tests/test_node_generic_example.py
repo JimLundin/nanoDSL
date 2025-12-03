@@ -1,6 +1,6 @@
 """Test real-world example of generic Node with type parameter serialization."""
 
-from typing import TypeVar
+from typing import TypeVar as TypingTypeVar
 
 from nanodsl.schema import extract_type
 from nanodsl.types import (
@@ -11,7 +11,7 @@ from nanodsl.types import (
     FloatType,
     NodeType,
     RefType,
-    TypeParameter,
+    TypeVar,
 )
 
 
@@ -22,7 +22,7 @@ def test_generic_node_field_extraction():
     Example: class Container[T]:
                  items: list[T]
 
-    When we extract the type of 'items', T should be a TypeParameter,
+    When we extract the type of 'items', T should be a TypeVar,
     not a concrete type.
     """
 
@@ -31,15 +31,15 @@ def test_generic_node_field_extraction():
     #     items: list[T]
 
     # Let's manually extract what list[T] would look like
-    T = TypeVar("T")
+    T = TypingTypeVar("T")
 
     items_type = extract_type(list[T])
 
     # The field type is a ListType
     assert isinstance(items_type, ListType)
 
-    # The element is a TypeParameter (the placeholder T), not a concrete type
-    assert isinstance(items_type.element, TypeParameter)
+    # The element is a TypeVar (the placeholder T), not a concrete type
+    assert isinstance(items_type.element, TypeVar)
     assert items_type.element.name == "T"
 
 
@@ -52,9 +52,9 @@ def test_complex_generic_node_field():
     - ListType
       - element: DictType
         - key: StrType
-        - value: TypeParameter(name="T")
+        - value: TypeVar(name="T")
     """
-    T = TypeVar("T")
+    T = TypingTypeVar("T")
 
     # Build the type annotation: list[dict[str, T]]
     result = extract_type(list[dict[str, T]])
@@ -70,7 +70,7 @@ def test_complex_generic_node_field():
     assert isinstance(dict_type.key, StrType)
 
     # dict's second arg: T (type parameter)
-    assert isinstance(dict_type.value, TypeParameter)
+    assert isinstance(dict_type.value, TypeVar)
     assert dict_type.value.name == "T"
     assert dict_type.value.bound is None
 
@@ -80,13 +80,13 @@ def test_bounded_type_parameter_in_generic_node():
     Test: class NumericNode[T: float]:
               value: T
 
-    The TypeParameter should capture the bound.
+    The TypeVar should capture the bound.
     """
-    T = TypeVar("T", bound=float)
+    T = TypingTypeVar("T", bound=float)
 
     result = extract_type(T)
 
-    assert isinstance(result, TypeParameter)
+    assert isinstance(result, TypeVar)
     assert result.name == "T"
     assert result.bound is not None
     assert isinstance(result.bound, FloatType)
@@ -98,12 +98,12 @@ def test_type_parameter_vs_concrete_type():
     1. A type parameter (T in class definition)
     2. A concrete type argument (int when using the class)
     """
-    T = TypeVar("T")
+    T = TypingTypeVar("T")
 
     # In the class definition: list[T]
     generic_form = extract_type(list[T])
     assert isinstance(generic_form, ListType)
-    assert isinstance(generic_form.element, TypeParameter)  # T is a parameter
+    assert isinstance(generic_form.element, TypeVar)  # T is a parameter
     assert generic_form.element.name == "T"
 
     # When using the class: list[int]
@@ -112,4 +112,4 @@ def test_type_parameter_vs_concrete_type():
     assert isinstance(concrete_form.element, IntType)  # int is concrete
 
     # They're both ListType, but their elements are different
-    # (TypeParameter vs IntType)
+    # (TypeVar vs IntType)

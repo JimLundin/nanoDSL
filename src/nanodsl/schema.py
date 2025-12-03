@@ -38,7 +38,6 @@ from nanodsl.types import (
     UnionType,
     TypeVar,
     TypeVarRef,
-    TypeParameter,  # Legacy alias
     _substitute_type_params,
 )
 from nanodsl.serialization import to_dict

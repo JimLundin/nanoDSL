@@ -311,10 +311,6 @@ class TypeVarRef(TypeDef, tag="typevarref"):
     name: str
 
 
-# Legacy alias for backwards compatibility during migration
-TypeParameter = TypeVar
-
-
 # =============================================================================
 # Type Parameter Substitution
 # =============================================================================

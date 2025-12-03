@@ -30,7 +30,6 @@ from nanodsl.types import (
     UnionType,
     TypeVar,
     TypeVarRef,
-    TypeParameter,  # Legacy alias for TypeVar
 )
 
 from nanodsl.serialization import (
@@ -59,7 +58,7 @@ __all__ = [
     "NodeRef",
     "Child",
     "AST",
-    # Type definitions (TypeDef has classmethod register() and get_registered_type())
+    # Type definitions
     "TypeDef",
     "IntType",
     "FloatType",
@@ -76,7 +75,6 @@ __all__ = [
     "UnionType",
     "TypeVar",
     "TypeVarRef",
-    "TypeParameter",  # Legacy alias
     # Serialization
     "to_dict",
     "from_dict",
