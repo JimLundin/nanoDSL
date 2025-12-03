@@ -199,6 +199,49 @@ class DictType(TypeDef, tag="dict"):
     value: TypeDef
 
 
+class SetType(TypeDef, tag="set"):
+    """
+    Set type with element type.
+
+    Example: set[int] → SetType(element=IntType())
+    """
+
+    element: TypeDef
+
+
+class TupleType(TypeDef, tag="tuple"):
+    """
+    Fixed-length heterogeneous tuple type.
+
+    Unlike list (homogeneous), tuple types have:
+    - Fixed length (known at schema time)
+    - Heterogeneous element types (each position can have different type)
+
+    Examples:
+        tuple[int, str, float] → TupleType(elements=(IntType(), StrType(), FloatType()))
+        tuple[str, str, str] → TupleType(elements=(StrType(), StrType(), StrType()))
+    """
+
+    elements: tuple[TypeDef, ...]
+
+
+class LiteralType(TypeDef, tag="literal"):
+    """
+    Literal type representing enumeration of values.
+
+    Maps Python's Literal[...] type to enumeration schema.
+
+    Examples:
+        Literal["red", "green", "blue"] → LiteralType(values=("red", "green", "blue"))
+        Literal[1, 2, 3] → LiteralType(values=(1, 2, 3))
+        Literal[True, False] → LiteralType(values=(True, False))
+
+    Note: Does not support Python enum.Enum at this stage.
+    """
+
+    values: tuple[str | int | bool, ...]
+
+
 # =============================================================================
 # Domain Types
 # =============================================================================
@@ -234,21 +277,42 @@ class UnionType(TypeDef, tag="union"):
     options: tuple[TypeDef, ...]
 
 
-class TypeParameter(TypeDef, tag="param"):
+class TypeVar(TypeDef, tag="typevar"):
     """
-    Type parameter in PEP 695 syntax.
+    Type variable declaration in PEP 695 generic definitions.
 
-    Type parameters are the placeholders in generic definitions that get
-    substituted with concrete types when the generic is used.
+    Represents the DECLARATION of a type variable (e.g., in class Foo[T]).
 
     Examples:
-        - class Foo[T]: ...         # T is an unbounded type parameter
-        - class Foo[T: int]: ...    # T is bounded (must be int or subtype)
-        - type Pair[T] = tuple[T, T]  # T is a type parameter in the alias
+        class Foo[T]: ... → TypeVar(name="T", bound=None)
+        class Foo[T: int | float]: ... → TypeVar(name="T", bound=UnionType(...))
+
+    This is the definition site of the type parameter.
     """
 
     name: str
-    bound: TypeDef | None = None  # Upper bound constraint (e.g., T: int)
+    bound: TypeDef | None = None
+
+
+class TypeVarRef(TypeDef, tag="typevarref"):
+    """
+    Reference to a type variable within a type expression.
+
+    Represents a USE of a type variable (e.g., in field: T).
+
+    Examples:
+        In class Foo[T]:
+            field: T → TypeVarRef(name="T")
+            field: list[T] → ListType(element=TypeVarRef(name="T"))
+
+    This is the use site that refers back to the TypeVar declaration.
+    """
+
+    name: str
+
+
+# Legacy alias for backwards compatibility during migration
+TypeParameter = TypeVar
 
 
 # =============================================================================

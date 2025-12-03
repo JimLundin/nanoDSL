@@ -14,7 +14,9 @@ from typing import (
     get_type_hints,
     Any,
     TypeAliasType,
-    TypeVar,
+    TypeVar as TypingTypeVar,
+    Literal as TypingLiteral,
+    get_args as typing_get_args,
 )
 import types
 
@@ -28,10 +30,15 @@ from nanodsl.types import (
     NoneType,
     ListType,
     DictType,
+    SetType,
+    TupleType,
+    LiteralType,
     NodeType,
     RefType,
     UnionType,
-    TypeParameter,
+    TypeVar,
+    TypeVarRef,
+    TypeParameter,  # Legacy alias
     _substitute_type_params,
 )
 from nanodsl.serialization import to_dict
@@ -46,10 +53,10 @@ def extract_type(py_type: Any) -> TypeDef:
     origin = get_origin(py_type)
     args = get_args(py_type)
 
-    # Handle TypeVar (PEP 695 type parameters like class Foo[T]: ...)
-    if isinstance(py_type, TypeVar):
+    # Handle typing.TypeVar (PEP 695 type parameters like class Foo[T]: ...)
+    if isinstance(py_type, TypingTypeVar):
         bound = getattr(py_type, "__bound__", None)
-        return TypeParameter(
+        return TypeVar(
             name=py_type.__name__,
             bound=extract_type(bound) if bound is not None else None,
         )
@@ -101,6 +108,30 @@ def extract_type(py_type: Any) -> TypeDef:
         if len(args) != 2:
             raise ValueError("dict type must have key and value types")
         return DictType(key=extract_type(args[0]), value=extract_type(args[1]))
+
+    if origin is set:
+        if not args:
+            raise ValueError("set type must have an element type")
+        return SetType(element=extract_type(args[0]))
+
+    if origin is tuple:
+        if not args:
+            raise ValueError("tuple type must have element types")
+        # Handle tuple[X, ...] (variable length) vs tuple[X, Y, Z] (fixed length)
+        # For now, we only support fixed-length heterogeneous tuples
+        return TupleType(elements=tuple(extract_type(arg) for arg in args))
+
+    # Literal types
+    if origin is TypingLiteral:
+        if not args:
+            raise ValueError("Literal type must have values")
+        # Validate that all values are str, int, or bool
+        for val in args:
+            if not isinstance(val, (str, int, bool)):
+                raise ValueError(
+                    f"Literal values must be str, int, or bool, got {type(val)}"
+                )
+        return LiteralType(values=args)
 
     # Node types
     if origin is not None and isinstance(origin, type) and issubclass(origin, Node):

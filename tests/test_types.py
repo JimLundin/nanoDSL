@@ -140,7 +140,7 @@ class TestTypeParameter:
         tp = TypeParameter(name="T")
         assert tp.name == "T"
         assert tp.bound is None
-        assert tp._tag == "param"
+        assert tp._tag == "typevar"
 
     def test_type_parameter_with_bound(self):
         """Test TypeParameter with bound (like T: int)."""
@@ -168,10 +168,14 @@ class TestTypeDefRegistry:
         assert "none" in TypeDef._registry
         assert "list" in TypeDef._registry
         assert "dict" in TypeDef._registry
+        assert "set" in TypeDef._registry
+        assert "tuple" in TypeDef._registry
+        assert "literal" in TypeDef._registry
         assert "node" in TypeDef._registry
         assert "ref" in TypeDef._registry
         assert "union" in TypeDef._registry
-        assert "param" in TypeDef._registry
+        assert "typevar" in TypeDef._registry
+        assert "typevarref" in TypeDef._registry
 
     def test_type_registry_maps_to_classes(self):
         """Test that registry maps tags to correct classes."""
@@ -185,7 +189,8 @@ class TestTypeDefRegistry:
         assert TypeDef._registry["node"] == NodeType
         assert TypeDef._registry["ref"] == RefType
         assert TypeDef._registry["union"] == UnionType
-        assert TypeDef._registry["param"] == TypeParameter
+        # TypeParameter is an alias for TypeVar, both map to the same class
+        assert TypeDef._registry["typevar"] == TypeParameter
 
 
 class TestNestedTypes:

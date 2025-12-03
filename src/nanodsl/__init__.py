@@ -22,10 +22,15 @@ from nanodsl.types import (
     NoneType,
     ListType,
     DictType,
+    SetType,
+    TupleType,
+    LiteralType,
     NodeType,
     RefType,
     UnionType,
-    TypeParameter,
+    TypeVar,
+    TypeVarRef,
+    TypeParameter,  # Legacy alias for TypeVar
 )
 
 from nanodsl.serialization import (
@@ -63,10 +68,15 @@ __all__ = [
     "NoneType",
     "ListType",
     "DictType",
+    "SetType",
+    "TupleType",
+    "LiteralType",
     "NodeType",
     "RefType",
     "UnionType",
-    "TypeParameter",
+    "TypeVar",
+    "TypeVarRef",
+    "TypeParameter",  # Legacy alias
     # Serialization
     "to_dict",
     "from_dict",
