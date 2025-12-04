@@ -154,11 +154,17 @@ class JSONAdapter(FormatAdapter):
     def _deserialize_value(self, value: Any) -> Any:
         """Deserialize a field value."""
         if isinstance(value, dict) and "tag" in value:
-            # Could be a Node or Ref
-            if value["tag"] == "ref":
+            tag = value["tag"]
+            # Check if it's a Ref
+            if tag == "ref":
                 return Ref(id=value["id"])
-            # Try to deserialize as node
-            return self.deserialize_node(value)
+            # Check if it's a Node or TypeDef
+            if tag in Node._registry:
+                return self.deserialize_node(value)
+            elif tag in TypeDef._registry:
+                return self.deserialize_typedef(value)
+            else:
+                raise ValueError(f"Unknown tag: {tag}")
         elif isinstance(value, list):
             return [self._deserialize_value(item) for item in value]
         elif isinstance(value, dict):
