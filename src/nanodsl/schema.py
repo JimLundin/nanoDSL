@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import dataclasses
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from typing import (
     get_args,
     get_origin,
@@ -32,8 +31,6 @@ from nanodsl.types import (
     RefType,
     UnionType,
     TypeParameter,
-    TypeParameterRef,
-    ExternalType,
     _substitute_type_params,
 )
 
@@ -167,21 +164,20 @@ def node_schema(cls: type[Node[Any]]) -> NodeSchema:
                     )
                 )
 
-    fields: list[FieldSchema] = []
-    for f in dataclasses.fields(cls):
-        if not f.name.startswith("_"):
-            fields.append(
-                FieldSchema(name=f.name, type=extract_type(hints[f.name]))
-            )
+    node_fields = (
+        FieldSchema(name=f.name, type=extract_type(hints[f.name]))
+        for f in fields(cls)
+        if not f.name.startswith("_")
+    )
 
     return NodeSchema(
         tag=cls._tag,
         type_params=tuple(type_params),
         returns=_extract_node_returns(cls),
-        fields=tuple(fields),
+        fields=tuple(node_fields),
     )
 
 
 def all_schemas() -> dict[str, NodeSchema]:
     """Get all registered node schemas."""
-    return {tag: node_schema(cls) for tag, cls in Node._registry.items()}
+    return {tag: node_schema(cls) for tag, cls in Node.registry.items()}

@@ -3,19 +3,20 @@
 from __future__ import annotations
 
 import types
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import dataclass_transform, get_args, get_origin, Any, ClassVar, Callable
+from typing import dataclass_transform, get_args, get_origin, Any, ClassVar
 
 
 @dataclass(frozen=True)
-class ExternalTypeRecord:
+class ExternalTypeRecord[T]:
     """Record for external type registration."""
 
-    python_type: type
+    python_type: type[T]
     module: str  # Full module path, e.g., "pandas.core.frame"
     name: str  # Class name, e.g., "DataFrame"
-    encode: Callable[[Any], dict]
-    decode: Callable[[dict], Any]
+    encode: Callable[[T], dict[str, Any]]
+    decode: Callable[[dict[str, Any]], T]
 
 
 @dataclass_transform(frozen_default=True)
@@ -23,30 +24,30 @@ class TypeDef:
     """Base for type definitions."""
 
     _tag: ClassVar[str]
-    _registry: ClassVar[dict[str, type[TypeDef]]] = {}
-    _external_types: ClassVar[dict[type, ExternalTypeRecord]] = {}
+    registry: ClassVar[dict[str, type[TypeDef]]] = {}
+    _external_types: ClassVar[dict[type, ExternalTypeRecord[Any]]] = {}
 
     def __init_subclass__(cls, tag: str | None = None):
         dataclass(frozen=True)(cls)
         cls._tag = tag or cls.__name__.lower().removesuffix("type")
 
-        if existing := TypeDef._registry.get(cls._tag):
+        if existing := TypeDef.registry.get(cls._tag):
             if existing is not cls:
                 raise ValueError(
                     f"Tag '{cls._tag}' already registered to {existing}. "
                     f"Choose a different tag."
                 )
 
-        TypeDef._registry[cls._tag] = cls
+        TypeDef.registry[cls._tag] = cls
 
     @classmethod
-    def register(
+    def register[T](
         cls,
-        python_type: type,
+        python_type: type[T],
         *,
-        encode: Callable[[Any], dict],
-        decode: Callable[[dict], Any],
-    ) -> type:
+        encode: Callable[[T], dict[str, Any]],
+        decode: Callable[[dict[str, Any]], T],
+    ) -> type[T]:
         """Register an external type for serialization. Returns the type unchanged."""
         module = python_type.__module__
         name = python_type.__name__

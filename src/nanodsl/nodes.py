@@ -18,20 +18,20 @@ class Node[T]:
     """Base for AST nodes. T is return type."""
 
     _tag: ClassVar[str]
-    _registry: ClassVar[dict[str, type[Node[Any]]]] = {}
+    registry: ClassVar[dict[str, type[Node[Any]]]] = {}
 
     def __init_subclass__(cls, tag: str | None = None):
         dataclass(frozen=True)(cls)
         cls._tag = tag or cls.__name__.lower().removesuffix("node")
 
-        if existing := Node._registry.get(cls._tag):
+        if existing := Node.registry.get(cls._tag):
             if existing is not cls:
                 raise ValueError(
                     f"Tag '{cls._tag}' already registered to {existing}. "
                     f"Choose a different tag."
                 )
 
-        Node._registry[cls._tag] = cls
+        Node.registry[cls._tag] = cls
 
 
 type NodeRef[T] = Ref[Node[T]]

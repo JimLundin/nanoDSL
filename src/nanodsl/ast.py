@@ -21,7 +21,7 @@ class AST:
         """Resolve a reference to its node."""
         return self.nodes[ref.id]
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "root": self.root,
             "nodes": {k: to_dict(v) for k, v in self.nodes.items()},
@@ -31,7 +31,7 @@ class AST:
         return json.dumps(self.to_dict(), indent=2)
 
     @classmethod
-    def from_dict(cls, data: dict) -> AST:
+    def from_dict(cls, data: dict[str, Any]) -> AST:
         return cls(data["root"], {k: from_dict(v) for k, v in data["nodes"].items()})
 
     @classmethod

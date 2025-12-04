@@ -3,78 +3,100 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-import dataclasses
-from typing import Any
+from dataclasses import fields
+from typing import Any, TypedDict
 
 from nanodsl.nodes import Node, Ref
 from nanodsl.types import TypeDef
-from nanodsl.schema import NodeSchema, FieldSchema
+from nanodsl.schema import NodeSchema
+
+
+class SerializedFieldSchema(TypedDict):
+    """Serialized field schema structure."""
+
+    name: str
+    type: dict[str, Any]
+
+
+class SerializedNodeSchema(TypedDict):
+    """Serialized node schema structure."""
+
+    tag: str
+    type_params: list[dict[str, Any]]
+    returns: dict[str, Any]
+    fields: list[SerializedFieldSchema]
 
 
 class FormatAdapter(ABC):
     """Base class for format-specific serialization."""
 
     @abstractmethod
-    def serialize_node(self, node: Node) -> Any: ...
+    def serialize_node(self, node: Node[Any]) -> dict[str, Any]: ...
 
     @abstractmethod
-    def deserialize_node(self, data: Any) -> Node: ...
+    def deserialize_node(self, data: dict[str, Any]) -> Node[Any]: ...
 
     @abstractmethod
-    def serialize_typedef(self, typedef: TypeDef) -> Any: ...
+    def serialize_typedef(self, typedef: TypeDef) -> dict[str, Any]: ...
 
     @abstractmethod
-    def deserialize_typedef(self, data: Any) -> TypeDef: ...
+    def deserialize_typedef(self, data: dict[str, Any]) -> TypeDef: ...
 
     @abstractmethod
-    def serialize_node_schema(self, schema: NodeSchema) -> Any: ...
+    def serialize_node_schema(self, schema: NodeSchema) -> SerializedNodeSchema: ...
 
 
 class JSONAdapter(FormatAdapter):
     """JSON serialization adapter."""
 
-    def serialize_node(self, node: Node) -> dict:
-        result = {"tag": type(node)._tag}
-        for field in dataclasses.fields(node):
-            if not field.name.startswith("_"):
-                result[field.name] = self._serialize_value(getattr(node, field.name))
+    def serialize_node(self, node: Node[Any]) -> dict[str, Any]:
+        result = {
+            field.name: self._serialize_value(getattr(node, field.name))
+            for field in fields(node)
+            if not field.name.startswith("_")
+        }
+        result["tag"] = type(node)._tag
         return result
 
-    def deserialize_node(self, data: dict) -> Node:
+    def deserialize_node(self, data: dict[str, Any]) -> Node[Any]:
         tag = data["tag"]
         if tag == "ref":
             return Ref(id=data["id"])
 
-        node_cls = Node._registry.get(tag)
+        node_cls = Node.registry.get(tag)
         if node_cls is None:
             raise ValueError(f"Unknown node tag: {tag}")
 
-        field_values = {}
-        for field in dataclasses.fields(node_cls):
-            if not field.name.startswith("_") and field.name in data:
-                field_values[field.name] = self._deserialize_value(data[field.name])
+        field_values = {
+            field.name: self._deserialize_value(data[field.name])
+            for field in fields(node_cls)
+            if not field.name.startswith("_") and field.name in data
+        }
         return node_cls(**field_values)
 
-    def deserialize_typedef(self, data: dict) -> TypeDef:
+    def deserialize_typedef(self, data: dict[str, Any]) -> TypeDef:
         tag = data["tag"]
-        typedef_cls = TypeDef._registry.get(tag)
+        typedef_cls = TypeDef.registry.get(tag)
         if typedef_cls is None:
             raise ValueError(f"Unknown TypeDef tag: {tag}")
 
-        field_values = {}
-        for field in dataclasses.fields(typedef_cls):
-            if not field.name.startswith("_") and field.name in data:
-                field_values[field.name] = self._deserialize_value(data[field.name])
+        field_values = {
+            field.name: self._deserialize_value(data[field.name])
+            for field in fields(typedef_cls)
+            if not field.name.startswith("_") and field.name in data
+        }
         return typedef_cls(**field_values)
 
-    def serialize_typedef(self, typedef: TypeDef) -> dict:
-        result = {"tag": type(typedef)._tag}
-        for field in dataclasses.fields(typedef):
-            if not field.name.startswith("_"):
-                result[field.name] = self._serialize_value(getattr(typedef, field.name))
+    def serialize_typedef(self, typedef: TypeDef) -> dict[str, Any]:
+        result = {
+            field.name: self._serialize_value(getattr(typedef, field.name))
+            for field in fields(typedef)
+            if not field.name.startswith("_")
+        }
+        result["tag"] = type(typedef)._tag
         return result
 
-    def serialize_node_schema(self, schema: NodeSchema) -> dict:
+    def serialize_node_schema(self, schema: NodeSchema) -> SerializedNodeSchema:
         return {
             "tag": schema.tag,
             "type_params": [self.serialize_typedef(tp) for tp in schema.type_params],
@@ -103,9 +125,9 @@ class JSONAdapter(FormatAdapter):
             tag = value["tag"]
             if tag == "ref":
                 return Ref(id=value["id"])
-            if tag in Node._registry:
+            if tag in Node.registry:
                 return self.deserialize_node(value)
-            if tag in TypeDef._registry:
+            if tag in TypeDef.registry:
                 return self.deserialize_typedef(value)
             raise ValueError(f"Unknown tag: {tag}")
         if isinstance(value, list):

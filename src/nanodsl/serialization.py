@@ -12,7 +12,7 @@ from nanodsl.adapters import JSONAdapter
 _adapter = JSONAdapter()
 
 
-def to_dict(obj: Node[Any] | Ref[Any] | TypeDef) -> dict:
+def to_dict(obj: Node[Any] | Ref[Any] | TypeDef) -> dict[str, Any]:
     """Serialize to dict."""
     if isinstance(obj, Ref):
         return {"tag": "ref", "id": obj.id}
@@ -23,23 +23,23 @@ def to_dict(obj: Node[Any] | Ref[Any] | TypeDef) -> dict:
     raise ValueError(f"Cannot serialize {type(obj)}")
 
 
-def from_dict(data: dict) -> Node | Ref | TypeDef:
+def from_dict(data: dict[str, Any]) -> Node[Any] | Ref[Any] | TypeDef:
     """Deserialize from dict."""
     tag = data["tag"]
     if tag == "ref":
         return Ref[Any](id=data["id"])
-    if tag in Node._registry:
+    if tag in Node.registry:
         return _adapter.deserialize_node(data)
-    if tag in TypeDef._registry:
+    if tag in TypeDef.registry:
         return _adapter.deserialize_typedef(data)
     raise ValueError(f"Unknown tag: {tag}")
 
 
-def to_json(obj: Node | Ref | TypeDef) -> str:
+def to_json(obj: Node[Any] | Ref[Any] | TypeDef) -> str:
     """Serialize to JSON string."""
     return json.dumps(to_dict(obj), indent=2)
 
 
-def from_json(s: str) -> Node | Ref | TypeDef:
+def from_json(s: str) -> Node[Any] | Ref[Any] | TypeDef:
     """Deserialize from JSON string."""
     return from_dict(json.loads(s))

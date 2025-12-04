@@ -166,40 +166,40 @@ class TestTypeDefRegistry:
 
     def test_type_registry_contains_types(self):
         """Test that type registry contains all type definitions."""
-        assert "int" in TypeDef._registry
-        assert "float" in TypeDef._registry
-        assert "str" in TypeDef._registry
-        assert "bool" in TypeDef._registry
-        assert "none" in TypeDef._registry
-        assert "list" in TypeDef._registry
-        assert "dict" in TypeDef._registry
-        assert "set" in TypeDef._registry
-        assert "tuple" in TypeDef._registry
-        assert "literal" in TypeDef._registry
-        assert "node" in TypeDef._registry
-        assert "ref" in TypeDef._registry
-        assert "union" in TypeDef._registry
-        assert "typeparam" in TypeDef._registry
-        assert "typeparamref" in TypeDef._registry
+        assert "int" in TypeDef.registry
+        assert "float" in TypeDef.registry
+        assert "str" in TypeDef.registry
+        assert "bool" in TypeDef.registry
+        assert "none" in TypeDef.registry
+        assert "list" in TypeDef.registry
+        assert "dict" in TypeDef.registry
+        assert "set" in TypeDef.registry
+        assert "tuple" in TypeDef.registry
+        assert "literal" in TypeDef.registry
+        assert "node" in TypeDef.registry
+        assert "ref" in TypeDef.registry
+        assert "union" in TypeDef.registry
+        assert "typeparam" in TypeDef.registry
+        assert "typeparamref" in TypeDef.registry
 
     def test_type_registry_maps_to_classes(self):
         """Test that registry maps tags to correct classes."""
-        assert TypeDef._registry["int"] == IntType
-        assert TypeDef._registry["float"] == FloatType
-        assert TypeDef._registry["str"] == StrType
-        assert TypeDef._registry["bool"] == BoolType
-        assert TypeDef._registry["none"] == NoneType
-        assert TypeDef._registry["list"] == ListType
-        assert TypeDef._registry["dict"] == DictType
-        assert TypeDef._registry["set"] == SetType
-        assert TypeDef._registry["tuple"] == TupleType
-        assert TypeDef._registry["literal"] == LiteralType
-        assert TypeDef._registry["node"] == NodeType
-        assert TypeDef._registry["ref"] == RefType
-        assert TypeDef._registry["union"] == UnionType
-        assert TypeDef._registry["typeparam"] == TypeParameter
-        assert TypeDef._registry["typeparamref"] == TypeParameterRef
-        assert TypeDef._registry["external"] == ExternalType
+        assert TypeDef.registry["int"] == IntType
+        assert TypeDef.registry["float"] == FloatType
+        assert TypeDef.registry["str"] == StrType
+        assert TypeDef.registry["bool"] == BoolType
+        assert TypeDef.registry["none"] == NoneType
+        assert TypeDef.registry["list"] == ListType
+        assert TypeDef.registry["dict"] == DictType
+        assert TypeDef.registry["set"] == SetType
+        assert TypeDef.registry["tuple"] == TupleType
+        assert TypeDef.registry["literal"] == LiteralType
+        assert TypeDef.registry["node"] == NodeType
+        assert TypeDef.registry["ref"] == RefType
+        assert TypeDef.registry["union"] == UnionType
+        assert TypeDef.registry["typeparam"] == TypeParameter
+        assert TypeDef.registry["typeparamref"] == TypeParameterRef
+        assert TypeDef.registry["external"] == ExternalType
 
 
 class TestNestedTypes:
