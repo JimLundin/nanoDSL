@@ -22,7 +22,7 @@ def test_generic_node_field_extraction():
     Example: class Container[T]:
                  items: list[T]
 
-    When we extract the type of 'items', T should be a TypeParameter,
+    When we extract the type of 'items', T should be a TypeVar,
     not a concrete type.
     """
 
@@ -38,7 +38,7 @@ def test_generic_node_field_extraction():
     # The field type is a ListType
     assert isinstance(items_type, ListType)
 
-    # The element is a TypeParameter (the placeholder T), not a concrete type
+    # The element is a TypeVar (the placeholder T), not a concrete type
     assert isinstance(items_type.element, TypeParameter)
     assert items_type.element.name == "T"
 
@@ -52,7 +52,7 @@ def test_complex_generic_node_field():
     - ListType
       - element: DictType
         - key: StrType
-        - value: TypeParameter(name="T")
+        - value: TypeVar(name="T")
     """
     T = TypeVar("T")
 
@@ -80,7 +80,7 @@ def test_bounded_type_parameter_in_generic_node():
     Test: class NumericNode[T: float]:
               value: T
 
-    The TypeParameter should capture the bound.
+    The TypeVar should capture the bound.
     """
     T = TypeVar("T", bound=float)
 
@@ -112,4 +112,4 @@ def test_type_parameter_vs_concrete_type():
     assert isinstance(concrete_form.element, IntType)  # int is concrete
 
     # They're both ListType, but their elements are different
-    # (TypeParameter vs IntType)
+    # (TypeVar vs IntType)

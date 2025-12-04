@@ -24,7 +24,7 @@ def test_type_parameter_in_annotation():
 
     assert isinstance(result, ListType)
 
-    # The element is the TypeParameter T, not a concrete type!
+    # The element is the TypeVar T, not a concrete type!
     assert isinstance(result.element, TypeParameter)
     assert result.element.name == "T"
 

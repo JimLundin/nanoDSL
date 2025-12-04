@@ -10,7 +10,23 @@ from __future__ import annotations
 
 import types
 from dataclasses import dataclass
-from typing import dataclass_transform, get_args, get_origin, Any, ClassVar
+from typing import dataclass_transform, get_args, get_origin, Any, ClassVar, Callable
+
+# =============================================================================
+# Type Registration Records
+# =============================================================================
+
+
+@dataclass(frozen=True)
+class ExternalTypeRecord:
+    """Record for external type registration."""
+
+    python_type: type
+    module: str  # Full module path, e.g., "pandas.core.frame"
+    name: str  # Class name, e.g., "DataFrame"
+    encode: Callable[[Any], dict]
+    decode: Callable[[dict], Any]
+
 
 # =============================================================================
 # Type Definition Base
@@ -22,29 +38,22 @@ class TypeDef:
     """Base for type definitions."""
 
     _tag: ClassVar[str]
-    _namespace: ClassVar[str]
     _registry: ClassVar[dict[str, type[TypeDef]]] = {}
-    _custom_types: ClassVar[dict[type, type[TypeDef]]] = (
-        {}
-    )  # Maps Python types to TypeDef classes
+    _external_types: ClassVar[dict[type, ExternalTypeRecord]] = {}
 
-    def __init_subclass__(cls, tag: str | None = None, namespace: str | None = None):
+    def __init_subclass__(cls, tag: str | None = None):
         # Always convert to frozen dataclass
         dataclass(frozen=True)(cls)
 
-        # Store namespace and base tag
-        cls._namespace = namespace or ""
-        base_tag = tag or cls.__name__.lower().removesuffix("type")
-
-        # Create full namespaced tag
-        cls._tag = f"{namespace}.{base_tag}" if namespace else base_tag
+        # Determine tag
+        cls._tag = tag or cls.__name__.lower().removesuffix("type")
 
         # Check for collisions
         if existing := TypeDef._registry.get(cls._tag):
             if existing is not cls:
                 raise ValueError(
                     f"Tag '{cls._tag}' already registered to {existing}. "
-                    f"Choose a different tag or namespace."
+                    f"Choose a different tag."
                 )
 
         TypeDef._registry[cls._tag] = cls
@@ -52,98 +61,58 @@ class TypeDef:
     @classmethod
     def register(
         cls,
-        python_type: type | None = None,
+        python_type: type,
         *,
-        tag: str | None = None,
-        namespace: str = "custom",
-    ) -> type[TypeDef] | Any:
+        encode: Callable[[Any], dict],
+        decode: Callable[[dict], Any],
+    ) -> type:
         """
-        Register a custom type with the type system.
+        Register an external type with the type system.
 
-        This method can be used either as a decorator or as a regular function call
-        to register existing types (like pandas DataFrame, numpy ndarray, etc.) with
-        the DSL type system.
+        Example:
+            TypeDef.register(
+                pd.DataFrame,
+                encode=lambda df: {"data": df.to_dict()},
+                decode=lambda d: pd.DataFrame(d["data"])
+            )
+            Creates ExternalType(module="pandas.core.frame", name="DataFrame")
 
         Args:
-            python_type: The Python class to register. If None, returns a decorator.
-            tag: Optional tag name. Defaults to lowercase class name.
-            namespace: Namespace for the type. Defaults to "custom".
+            python_type: The Python class to register.
+            encode: Function to encode instances to dict.
+            decode: Function to decode dict to instances.
 
         Returns:
-            If used as decorator: returns the original class unchanged
-            If used as function: returns the created TypeDef subclass
-
-        Examples:
-            # Register an existing type (e.g., pandas DataFrame)
-            >>> import pandas as pd
-            >>> TypeDef.register(pd.DataFrame)  # tag="custom.dataframe"
-            >>> TypeDef.register(pd.DataFrame, tag="df")  # tag="custom.df"
-
-            # Use as decorator for marker classes
-            >>> @TypeDef.register
-            ... class GraphicsContext:
-            ...     '''Marker for graphics context type.'''
-            ...     pass
-
-            # Use as decorator with custom tag
-            >>> @TypeDef.register(tag="matrix")
-            ... class Matrix:
-            ...     pass
+            The original python_type (unchanged).
         """
+        # Get type info
+        module = python_type.__module__
+        name = python_type.__name__
 
-        def _create_typedef(py_type: type) -> type[TypeDef]:
-            """Create and register a TypeDef for the given Python type."""
-            # Determine the tag
-            base_tag = tag or py_type.__name__.lower()
-
-            # Check if already registered
-            if py_type in cls._custom_types:
-                existing = cls._custom_types[py_type]
-                full_tag = f"{namespace}.{base_tag}" if namespace else base_tag
-                # If same tag, it's idempotent
-                if existing._tag == full_tag:
-                    return existing
-                raise ValueError(
-                    f"Type {py_type} already registered with tag '{existing._tag}'. "
-                    f"Cannot re-register with tag '{full_tag}'."
-                )
-
-            # Create TypeDef subclass dynamically
-            typedef_name = f"{py_type.__name__}Type"
-
-            # Build class dict
-            class_dict = {
-                "__module__": py_type.__module__,
-                "__doc__": f"Custom type definition for {py_type.__name__}.",
-            }
-
-            # Create the class - type() will call __init_subclass__ with our kwargs
-            typedef_cls = type(
-                typedef_name, (TypeDef,), class_dict, tag=base_tag, namespace=namespace
+        # Check if already registered
+        if python_type in cls._external_types:
+            existing = cls._external_types[python_type]
+            # Idempotent if same module/name
+            if existing.module == module and existing.name == name:
+                return python_type
+            raise ValueError(
+                f"Type {python_type} already registered as "
+                f"{existing.module}.{existing.name}"
             )
 
-            # Register the mapping
-            cls._custom_types[py_type] = typedef_cls
-
-            return typedef_cls
-
-        # If called without arguments as a decorator: @TypeDef.register
-        if python_type is not None:
-            _create_typedef(python_type)
-            # When used as decorator, return the original class unchanged
-            # This allows the marker class to still be used normally
-            return python_type
-
-        # If called with arguments: @TypeDef.register(tag="foo")
-        # Return a decorator that will be applied to the class
-        def decorator(py_type: type) -> type:
-            _create_typedef(py_type)
-            return py_type
-
-        return decorator
+        # Create and store record
+        record = ExternalTypeRecord(
+            python_type=python_type,
+            module=module,
+            name=name,
+            encode=encode,
+            decode=decode,
+        )
+        cls._external_types[python_type] = record
+        return python_type
 
     @classmethod
-    def get_registered_type(cls, python_type: type) -> type[TypeDef] | None:
+    def get_registered_type(cls, python_type: type) -> TypeDef | None:
         """
         Get the registered TypeDef for a Python type.
 
@@ -151,9 +120,14 @@ class TypeDef:
             python_type: The Python type to look up
 
         Returns:
-            The TypeDef class registered for this type, or None if not registered
+            ExternalType instance for this type, or None if not registered
         """
-        return cls._custom_types.get(python_type)
+        if python_type in cls._external_types:
+            record = cls._external_types[python_type]
+            # ExternalType is defined below in this same file
+            return ExternalType(module=record.module, name=record.name)
+
+        return None
 
 
 # =============================================================================
@@ -161,23 +135,23 @@ class TypeDef:
 # =============================================================================
 
 
-class IntType(TypeDef, tag="int", namespace="std"):
+class IntType(TypeDef, tag="int"):
     """Integer type."""
 
 
-class FloatType(TypeDef, tag="float", namespace="std"):
+class FloatType(TypeDef, tag="float"):
     """Floating point type."""
 
 
-class StrType(TypeDef, tag="str", namespace="std"):
+class StrType(TypeDef, tag="str"):
     """String type."""
 
 
-class BoolType(TypeDef, tag="bool", namespace="std"):
+class BoolType(TypeDef, tag="bool"):
     """Boolean type."""
 
 
-class NoneType(TypeDef, tag="none", namespace="std"):
+class NoneType(TypeDef, tag="none"):
     """None/null type."""
 
 
@@ -186,7 +160,7 @@ class NoneType(TypeDef, tag="none", namespace="std"):
 # =============================================================================
 
 
-class ListType(TypeDef, tag="list", namespace="std"):
+class ListType(TypeDef, tag="list"):
     """
     List type with element type.
 
@@ -196,7 +170,7 @@ class ListType(TypeDef, tag="list", namespace="std"):
     element: TypeDef
 
 
-class DictType(TypeDef, tag="dict", namespace="std"):
+class DictType(TypeDef, tag="dict"):
     """
     Dictionary type with key and value types.
 
@@ -207,12 +181,55 @@ class DictType(TypeDef, tag="dict", namespace="std"):
     value: TypeDef
 
 
+class SetType(TypeDef, tag="set"):
+    """
+    Set type with element type.
+
+    Example: set[int] → SetType(element=IntType())
+    """
+
+    element: TypeDef
+
+
+class TupleType(TypeDef, tag="tuple"):
+    """
+    Fixed-length heterogeneous tuple type.
+
+    Unlike list (homogeneous), tuple types have:
+    - Fixed length (known at schema time)
+    - Heterogeneous element types (each position can have different type)
+
+    Examples:
+        tuple[int, str, float] → TupleType(elements=(IntType(), StrType(), FloatType()))
+        tuple[str, str, str] → TupleType(elements=(StrType(), StrType(), StrType()))
+    """
+
+    elements: tuple[TypeDef, ...]
+
+
+class LiteralType(TypeDef, tag="literal"):
+    """
+    Literal type representing enumeration of values.
+
+    Maps Python's Literal[...] type to enumeration schema.
+
+    Examples:
+        Literal["red", "green", "blue"] → LiteralType(values=("red", "green", "blue"))
+        Literal[1, 2, 3] → LiteralType(values=(1, 2, 3))
+        Literal[True, False] → LiteralType(values=(True, False))
+
+    Note: Does not support Python enum.Enum at this stage.
+    """
+
+    values: tuple[str | int | bool, ...]
+
+
 # =============================================================================
 # Domain Types
 # =============================================================================
 
 
-class NodeType(TypeDef, tag="node", namespace="std"):
+class NodeType(TypeDef, tag="node"):
     """
     AST Node type with return type.
 
@@ -222,7 +239,7 @@ class NodeType(TypeDef, tag="node", namespace="std"):
     returns: TypeDef
 
 
-class RefType(TypeDef, tag="ref", namespace="std"):
+class RefType(TypeDef, tag="ref"):
     """
     Reference type pointing to another type.
 
@@ -232,7 +249,7 @@ class RefType(TypeDef, tag="ref", namespace="std"):
     target: TypeDef
 
 
-class UnionType(TypeDef, tag="union", namespace="std"):
+class UnionType(TypeDef, tag="union"):
     """
     Union of multiple types.
 
@@ -242,21 +259,54 @@ class UnionType(TypeDef, tag="union", namespace="std"):
     options: tuple[TypeDef, ...]
 
 
-class TypeParameter(TypeDef, tag="param", namespace="std"):
+class TypeParameter(TypeDef, tag="typeparam"):
     """
-    Type parameter in PEP 695 syntax.
+    Type parameter declaration in PEP 695 generic definitions.
 
-    Type parameters are the placeholders in generic definitions that get
-    substituted with concrete types when the generic is used.
+    Represents the DECLARATION of a type parameter (e.g., in class Foo[T]).
 
     Examples:
-        - class Foo[T]: ...         # T is an unbounded type parameter
-        - class Foo[T: int]: ...    # T is bounded (must be int or subtype)
-        - type Pair[T] = tuple[T, T]  # T is a type parameter in the alias
+        class Foo[T]: ... → TypeParameter(name="T", bound=None)
+        class Foo[T: int | float]: ... → TypeParameter(name="T", bound=UnionType(...))
+
+    This is the definition site of the type parameter.
     """
 
     name: str
-    bound: TypeDef | None = None  # Upper bound constraint (e.g., T: int)
+    bound: TypeDef | None = None
+
+
+class TypeParameterRef(TypeDef, tag="typeparamref"):
+    """
+    Reference to a type parameter within a type expression.
+
+    Represents a USE of a type parameter (e.g., in field: T).
+
+    Examples:
+        In class Foo[T]:
+            field: T → TypeParameterRef(name="T")
+            field: list[T] → ListType(element=TypeParameterRef(name="T"))
+
+    This is the use site that refers back to the TypeParameter declaration.
+    """
+
+    name: str
+
+
+class ExternalType(TypeDef, tag="external"):
+    """
+    Reference to an externally registered type.
+
+    Used for third-party types like pandas.DataFrame, polars.DataFrame, etc.
+    Stores module and name to uniquely identify types across different libraries.
+
+    Examples:
+        pd.DataFrame → ExternalType(module="pandas.core.frame", name="DataFrame")
+        pl.DataFrame → ExternalType(module="polars.dataframe.frame", name="DataFrame")
+    """
+
+    module: str  # Full module path
+    name: str  # Class name
 
 
 # =============================================================================

@@ -22,10 +22,16 @@ from nanodsl.types import (
     NoneType,
     ListType,
     DictType,
+    SetType,
+    TupleType,
+    LiteralType,
     NodeType,
     RefType,
     UnionType,
     TypeParameter,
+    TypeParameterRef,
+    ExternalType,
+    ExternalTypeRecord,
 )
 
 from nanodsl.serialization import (
@@ -41,6 +47,15 @@ from nanodsl.schema import (
     extract_type,
     node_schema,
     all_schemas,
+    # Schema dataclasses
+    NodeSchema,
+    FieldSchema,
+)
+
+from nanodsl.adapters import (
+    # Format adapters
+    FormatAdapter,
+    JSONAdapter,
 )
 
 from nanodsl.ast import (
@@ -54,7 +69,7 @@ __all__ = [
     "NodeRef",
     "Child",
     "AST",
-    # Type definitions (TypeDef has classmethod register() and get_registered_type())
+    # Type definitions
     "TypeDef",
     "IntType",
     "FloatType",
@@ -63,10 +78,16 @@ __all__ = [
     "NoneType",
     "ListType",
     "DictType",
+    "SetType",
+    "TupleType",
+    "LiteralType",
     "NodeType",
     "RefType",
     "UnionType",
     "TypeParameter",
+    "TypeParameterRef",
+    "ExternalType",
+    "ExternalTypeRecord",
     # Serialization
     "to_dict",
     "from_dict",
@@ -76,4 +97,9 @@ __all__ = [
     "extract_type",
     "node_schema",
     "all_schemas",
+    "NodeSchema",
+    "FieldSchema",
+    # Format adapters
+    "FormatAdapter",
+    "JSONAdapter",
 ]
