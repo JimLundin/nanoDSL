@@ -200,6 +200,54 @@ class DataSource(Node[pd.DataFrame]):
     path: str
 ```
 
+## Security Considerations
+
+### Deserializing Untrusted Data
+
+**Warning**: Only deserialize JSON/dict data from trusted sources.
+
+The `from_dict()` and `from_json()` functions use the node registry to instantiate classes. While nanoDSL itself doesn't execute arbitrary code during deserialization, you should be aware of:
+
+1. **Registered External Types**: If you register external types with custom `decode` functions, those functions will be executed during deserialization
+2. **Node Construction**: Deserialized data is used to construct Node instances - ensure your Node classes don't have side effects in `__post_init__`
+
+```python
+# ❌ UNSAFE: Deserializing untrusted JSON from user input
+user_input = request.get_json()
+node = from_dict(user_input)  # Could instantiate unexpected node types
+
+# ✅ SAFE: Validate tag before deserializing
+allowed_tags = {"literal", "add", "multiply"}
+if user_input.get("tag") not in allowed_tags:
+    raise ValueError(f"Unexpected node tag: {user_input.get('tag')}")
+node = from_dict(user_input)
+```
+
+### Tag Validation
+
+Node tags are automatically validated to ensure they:
+- Start with a lowercase letter
+- Contain only lowercase letters, digits, hyphens, and underscores
+
+```python
+# ✅ Valid tags
+class MyNode(Node[int], tag="my-node"):      # lowercase with hyphens
+class MyNode(Node[int], tag="node_123"):     # lowercase with underscores and digits
+
+# ❌ Invalid tags (will raise ValueError)
+class MyNode(Node[int], tag="MyNode"):       # uppercase
+class MyNode(Node[int], tag="123node"):      # starts with digit
+class MyNode(Node[int], tag="my node"):      # contains space
+```
+
+### Best Practices
+
+1. **Validate input**: Always validate deserialized data before using it in your application
+2. **Limit registered types**: Only register external types that you control
+3. **Sanitize decode functions**: Ensure custom `decode` functions don't have side effects
+4. **Use allowlists**: When accepting user-provided ASTs, validate against an allowlist of expected tags
+5. **Frozen by default**: Nodes are immutable, preventing accidental modification after creation
+
 ## Complete Example: Expression Evaluator
 
 ```python
