@@ -30,19 +30,16 @@ reportUnnecessaryIsInstance = "warning"  # Defensive checks for invalid inputs a
 
 [tool.ruff]
 unsafe-fixes = true
-extend-exclude = ["tests"]  # Tests have different concerns than library code
 
 [tool.ruff.lint]
-fixable = ["ALL"]
-select = ["ALL"]
-ignore = [
-    "D203",    # incompatible with D211
-    "D213",    # incompatible with D212
-    "COM812",  # trailing comma - conflicts with formatter
+select = [
+    "E",      # pycodestyle errors
+    "F",      # Pyflakes
+    "W",      # pycodestyle warnings
+    "I",      # isort
+    "N",      # pep8-naming
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "RUF",    # Ruff-specific rules
 ]
-
-[tool.ruff.lint.per-file-ignores]
-# Type manipulation modules legitimately use Any - Python's type system can't express "any type annotation"
-"src/typedsl/types.py" = ["ANN401"]
-"src/typedsl/schema.py" = ["ANN401", "C901", "PLR0911", "PLR0912"]  # extract_type complexity is inherent
-"src/typedsl/adapters.py" = ["ANN401"]
