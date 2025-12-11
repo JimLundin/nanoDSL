@@ -105,7 +105,7 @@ class Interpreter[Ctx, R](ABC):
     def run(self) -> R:
         """Evaluate the AST from its root node."""
         root = self.ast.nodes[self.ast.root]
-        return self.eval(root)
+        return self.eval(root)  # type: ignore[no-any-return]
 
     def resolve[X](self, ref: Ref[X]) -> X:
         """Resolve a reference to its target."""

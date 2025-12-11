@@ -70,10 +70,12 @@ def from_dict(data: dict[str, Any]) -> Node[Any] | Ref[Any] | TypeDef:
     # Provide helpful error with available tags
     available_node_tags = list(Node.registry.keys())
     available_typedef_tags = list(TypeDef.registry.keys())
+    node_suffix = "..." if len(available_node_tags) > 10 else ""
+    typedef_suffix = "..." if len(available_typedef_tags) > 10 else ""
     msg = (
         f"Unknown tag '{tag}'. "
-        f"Available node tags: {available_node_tags[:10]}{'...' if len(available_node_tags) > 10 else ''}. "
-        f"Available typedef tags: {available_typedef_tags[:10]}{'...' if len(available_typedef_tags) > 10 else ''}"
+        f"Available node tags: {available_node_tags[:10]}{node_suffix}. "
+        f"Available typedef tags: {available_typedef_tags[:10]}{typedef_suffix}"
     )
     raise ValueError(msg)
 

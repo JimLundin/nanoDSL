@@ -37,7 +37,7 @@ class TypeDef:
     registry: ClassVar[dict[str, type[TypeDef]]] = {}
     _external_types: ClassVar[dict[type, ExternalTypeRecord[Any]]] = {}
 
-    def __init_subclass__(cls, tag: str | None = None):
+    def __init_subclass__(cls, tag: str | None = None) -> None:
         dataclass(frozen=True)(cls)
         cls._tag = tag or cls.__name__.lower().removesuffix("type")
 
@@ -181,8 +181,9 @@ class SequenceType(TypeDef, tag="sequence"):
 
 
 class MappingType(TypeDef, tag="mapping"):
-    """Generic mapping type: Mapping[str, int] → MappingType(key=StrType(), value=IntType()).
+    """Generic mapping type.
 
+    Mapping[str, int] -> MappingType(key=StrType(), value=IntType()).
     Abstract key-value mapping - serializers determine concrete representation.
     """
 
