@@ -303,10 +303,10 @@ class TestPEP695TypeAlias:
         # Create a generic type alias: type Pair[T] = tuple[T, T]
         # When we use Pair[int], it should expand to tuple[int, int]
         # But we can't use tuple in our limited type system, so let's use dict
-        exec("type Mapping[V] = dict[str, V]", globals())
-        Mapping = globals()["Mapping"]
+        exec("type StrKeyDict[V] = dict[str, V]", globals())
+        str_key_dict = globals()["StrKeyDict"]
 
-        result = extract_type(Mapping[int])
+        result = extract_type(str_key_dict[int])
         assert isinstance(result, DictType)
         assert isinstance(result.key, StrType)
         assert isinstance(result.value, IntType)
