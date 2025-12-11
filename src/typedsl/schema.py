@@ -63,20 +63,25 @@ _SIMPLE_TYPE_MAP: dict[type, type[TypeDef]] = {
     datetime.timedelta: DurationType,
 }
 
-# Mapping from container origins to (TypeDef class, type name) for single-element containers
-_ELEMENT_CONTAINER_MAP: dict[type, tuple[type[TypeDef], str]] = {
-    list: (ListType, "list"),
-    set: (SetType, "set"),
-    frozenset: (FrozenSetType, "frozenset"),
-    Sequence: (SequenceType, "Sequence"),
-    AbstractSet: (AbstractSetType, "Set"),
+# Mapping from container origins to (TypeDef class, expected arg count)
+# 1 arg = element container, 2 args = key-value container
+_CONTAINER_TYPE_MAP: dict[type, tuple[type[TypeDef], int]] = {
+    list: (ListType, 1),
+    set: (SetType, 1),
+    frozenset: (FrozenSetType, 1),
+    Sequence: (SequenceType, 1),
+    AbstractSet: (AbstractSetType, 1),
+    dict: (DictType, 2),
+    Mapping: (MappingType, 2),
 }
 
-# Mapping from container origins to (TypeDef class, type name) for key-value containers
-_KEY_VALUE_CONTAINER_MAP: dict[type, tuple[type[TypeDef], str]] = {
-    dict: (DictType, "dict"),
-    Mapping: (MappingType, "Mapping"),
-}
+
+def _get_type_name(origin: type) -> str:
+    """Get a readable name for a type origin."""
+    # AbstractSet is imported as 'Set as AbstractSet', show as 'Set'
+    if origin is AbstractSet:
+        return "Set"
+    return getattr(origin, "__name__", str(origin))
 
 
 @dataclass(frozen=True)
@@ -132,20 +137,18 @@ def extract_type(py_type: Any) -> TypeDef:
     if py_type in _SIMPLE_TYPE_MAP:
         return _SIMPLE_TYPE_MAP[py_type]()
 
-    # Single-element container types
-    if origin in _ELEMENT_CONTAINER_MAP:
-        typedef_cls, type_name = _ELEMENT_CONTAINER_MAP[origin]
-        if not args:
-            msg = f"{type_name} type must have an element type"
+    # Container types (element or key-value)
+    if origin in _CONTAINER_TYPE_MAP:
+        typedef_cls, arg_count = _CONTAINER_TYPE_MAP[origin]
+        type_name = _get_type_name(origin)
+        if len(args) != arg_count:
+            if arg_count == 1:
+                msg = f"{type_name} type must have an element type"
+            else:
+                msg = f"{type_name} type must have key and value types"
             raise ValueError(msg)
-        return typedef_cls(element=extract_type(args[0]))
-
-    # Key-value container types
-    if origin in _KEY_VALUE_CONTAINER_MAP:
-        typedef_cls, type_name = _KEY_VALUE_CONTAINER_MAP[origin]
-        if len(args) != 2:
-            msg = f"{type_name} type must have key and value types"
-            raise ValueError(msg)
+        if arg_count == 1:
+            return typedef_cls(element=extract_type(args[0]))
         return typedef_cls(key=extract_type(args[0]), value=extract_type(args[1]))
 
     # Tuple (heterogeneous, variable-length elements)
