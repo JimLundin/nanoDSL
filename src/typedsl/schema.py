@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import datetime
 import types
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, fields
+from decimal import Decimal
 from typing import (
     Any,
     Literal,
@@ -18,22 +21,60 @@ from typing import (
 from typedsl.nodes import Node, Ref
 from typedsl.types import (
     BoolType,
+    BytesType,
+    DateTimeType,
+    DateType,
+    DecimalType,
     DictType,
+    DurationType,
     FloatType,
+    FrozenSetType,
     IntType,
     ListType,
     LiteralType,
+    MappingType,
     NodeType,
     NoneType,
     RefType,
+    SequenceType,
     SetType,
     StrType,
+    TimeType,
     TupleType,
     TypeDef,
     TypeParameter,
     UnionType,
     _substitute_type_params,
 )
+
+# Unified type map: Python type/origin -> TypeDef class
+_TYPE_MAP: dict[type, type[TypeDef]] = {
+    # Simple types
+    int: IntType,
+    float: FloatType,
+    str: StrType,
+    bool: BoolType,
+    type(None): NoneType,
+    bytes: BytesType,
+    Decimal: DecimalType,
+    datetime.date: DateType,
+    datetime.time: TimeType,
+    datetime.datetime: DateTimeType,
+    datetime.timedelta: DurationType,
+    # Element containers
+    list: ListType,
+    set: SetType,
+    frozenset: FrozenSetType,
+    Sequence: SequenceType,
+    # Key-value containers
+    dict: DictType,
+    Mapping: MappingType,
+}
+
+
+def _get_field_count(typedef_cls: type[TypeDef]) -> int:
+    """Get the number of public fields from a TypeDef class."""
+    return sum(1 for f in fields(typedef_cls) if not f.name.startswith("_"))
 
 
 @dataclass(frozen=True)
@@ -59,6 +100,7 @@ def extract_type(py_type: Any) -> TypeDef:
     origin = get_origin(py_type)
     args = get_args(py_type)
 
+    # Handle TypeVar
     if isinstance(py_type, TypeVar):
         bound = py_type.__bound__
         return TypeParameter(
@@ -66,6 +108,7 @@ def extract_type(py_type: Any) -> TypeDef:
             bound=extract_type(bound) if bound is not None else None,
         )
 
+    # Handle registered external types
     custom_typedef = TypeDef.get_registered_type(py_type)
     if custom_typedef is not None:
         return custom_typedef
@@ -83,41 +126,25 @@ def extract_type(py_type: Any) -> TypeDef:
         substituted = _substitute_type_params(origin.__value__, substitutions)
         return extract_type(substituted)
 
-    if py_type is int:
-        return IntType()
-    if py_type is float:
-        return FloatType()
-    if py_type is str:
-        return StrType()
-    if py_type is bool:
-        return BoolType()
-    if py_type is type(None):
-        return NoneType()
-
-    if origin is list:
-        if not args:
-            msg = "list type must have an element type"
+    # Check unified type map (simple types use py_type, containers use origin)
+    lookup_key = py_type if py_type in _TYPE_MAP else origin
+    if lookup_key in _TYPE_MAP:
+        typedef_cls = _TYPE_MAP[lookup_key]
+        field_count = _get_field_count(typedef_cls)
+        if len(args) != field_count:
+            type_name = getattr(lookup_key, "__name__", str(lookup_key))
+            msg = f"{type_name} requires {field_count} type argument(s), got {len(args)}"
             raise ValueError(msg)
-        return ListType(element=extract_type(args[0]))
+        return typedef_cls(*(extract_type(arg) for arg in args))
 
-    if origin is dict:
-        if len(args) != 2:
-            msg = "dict type must have key and value types"
-            raise ValueError(msg)
-        return DictType(key=extract_type(args[0]), value=extract_type(args[1]))
-
-    if origin is set:
-        if not args:
-            msg = "set type must have an element type"
-            raise ValueError(msg)
-        return SetType(element=extract_type(args[0]))
-
+    # Tuple (heterogeneous, variable-length elements)
     if origin is tuple:
         if not args:
             msg = "tuple type must have element types"
             raise ValueError(msg)
         return TupleType(elements=tuple(extract_type(arg) for arg in args))
 
+    # Literal values
     if origin is Literal:
         if not args:
             msg = "Literal type must have values"
@@ -128,15 +155,17 @@ def extract_type(py_type: Any) -> TypeDef:
                 raise TypeError(msg)
         return LiteralType(values=args)
 
+    # Node types
     if origin is not None and isinstance(origin, type) and issubclass(origin, Node):
         return NodeType(extract_type(args[0]) if args else NoneType())
-
     if isinstance(py_type, type) and issubclass(py_type, Node):
         return NodeType(_extract_node_returns(py_type))
 
+    # Ref type
     if origin is Ref:
         return RefType(extract_type(args[0]) if args else NoneType())
 
+    # Union types
     if isinstance(py_type, types.UnionType) or origin is Union:
         return UnionType(tuple(extract_type(a) for a in args))
 

@@ -114,6 +114,31 @@ class NoneType(TypeDef, tag="none"):
     """None/null type."""
 
 
+class BytesType(TypeDef, tag="bytes"):
+    """Binary data type."""
+
+
+class DecimalType(TypeDef, tag="decimal"):
+    """Arbitrary precision decimal type."""
+
+
+# Temporal types - abstract representations that serializers interpret
+class DateType(TypeDef, tag="date"):
+    """Date type (year, month, day)."""
+
+
+class TimeType(TypeDef, tag="time"):
+    """Time type (hour, minute, second, microsecond)."""
+
+
+class DateTimeType(TypeDef, tag="datetime"):
+    """DateTime type (combined date and time)."""
+
+
+class DurationType(TypeDef, tag="duration"):
+    """Duration/timedelta type."""
+
+
 class ListType(TypeDef, tag="list"):
     """List type: list[int] → ListType(element=IntType())."""
 
@@ -133,10 +158,36 @@ class SetType(TypeDef, tag="set"):
     element: TypeDef
 
 
+class FrozenSetType(TypeDef, tag="frozenset"):
+    """Immutable set type: frozenset[int] → FrozenSetType(element=IntType())."""
+
+    element: TypeDef
+
+
 class TupleType(TypeDef, tag="tuple"):
     """Fixed-length heterogeneous tuple: tuple[int, str] → TupleType(elements=(...))."""
 
     elements: tuple[TypeDef, ...]
+
+
+# Generic container types - abstract containers that serializers interpret
+class SequenceType(TypeDef, tag="sequence"):
+    """Generic sequence type: Sequence[int] → SequenceType(element=IntType()).
+
+    Abstract ordered collection - serializers determine concrete representation.
+    """
+
+    element: TypeDef
+
+
+class MappingType(TypeDef, tag="mapping"):
+    """Generic mapping type: Mapping[str, int] → MappingType(key=StrType(), value=IntType()).
+
+    Abstract key-value mapping - serializers determine concrete representation.
+    """
+
+    key: TypeDef
+    value: TypeDef
 
 
 class LiteralType(TypeDef, tag="literal"):
