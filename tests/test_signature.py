@@ -1,57 +1,8 @@
 """Tests for node signature composition."""
 
-from typedsl.nodes import Node, Signature
+from typedsl.nodes import Node
 from typedsl.schema import node_schema
 from typedsl.serialization import to_dict
-
-
-class TestSignatureBasics:
-    """Test basic signature functionality."""
-
-    def test_signature_creation_with_args(self) -> None:
-        """Signature can be created with positional args."""
-        sig = Signature(args=("math", "add"), kwargs={})
-        assert sig.args == ("math", "add")
-        assert sig.kwargs == {}
-
-    def test_signature_creation_with_kwargs(self) -> None:
-        """Signature can be created with keyword args."""
-        sig = Signature(args=(), kwargs={"ns": "math", "name": "add"})
-        assert sig.args == ()
-        assert sig.kwargs == {"ns": "math", "name": "add"}
-
-    def test_signature_creation_with_mixed(self) -> None:
-        """Signature can be created with both args and kwargs."""
-        sig = Signature(args=("math",), kwargs={"name": "add", "version": "1.0"})
-        assert sig.args == ("math",)
-        assert sig.kwargs == {"name": "add", "version": "1.0"}
-
-    def test_signature_compose_with_args(self) -> None:
-        """Signature composes args into tag with delimiter."""
-        sig = Signature(args=("math", "add", "v1"), kwargs={})
-        assert sig.compose(".") == "math.add.v1"
-
-    def test_signature_compose_with_kwargs(self) -> None:
-        """Signature composes kwargs into tag with insertion order."""
-        sig = Signature(args=(), kwargs={"ns": "math", "name": "add"})
-        assert sig.compose(".") == "math.add"
-
-    def test_signature_compose_with_mixed(self) -> None:
-        """Signature composes args first, then kwargs."""
-        sig = Signature(args=("math", "add"), kwargs={"version": "1.0"})
-        assert sig.compose(".") == "math.add.1.0"
-
-    def test_signature_compose_empty(self) -> None:
-        """Empty signature composes to empty string."""
-        sig = Signature(args=(), kwargs={})
-        assert sig.compose(".") == ""
-
-    def test_signature_compose_custom_delimiter(self) -> None:
-        """Signature can use custom delimiter."""
-        sig = Signature(args=("math", "add"), kwargs={})
-        assert sig.compose(":") == "math:add"
-        assert sig.compose("/") == "math/add"
-        assert sig.compose("-") == "math-add"
 
 
 class TestNodeWithSignature:
@@ -64,8 +15,7 @@ class TestNodeWithSignature:
             value: int
 
         assert SimpleNode._tag == "simple_sig"
-        assert SimpleNode._signature.args == ()
-        assert SimpleNode._signature.kwargs == {"tag": "simple_sig"}
+        assert SimpleNode._signature == {"tag": "simple_sig"}
 
     def test_node_with_multiple_kwargs(self) -> None:
         """Node can use multiple kwargs for signature."""
@@ -75,8 +25,7 @@ class TestNodeWithSignature:
             right: int
 
         assert AddNode._tag == "math.add"
-        assert AddNode._signature.args == ()
-        assert AddNode._signature.kwargs == {"ns": "math", "name": "add"}
+        assert AddNode._signature == {"ns": "math", "name": "add"}
 
     def test_node_with_three_part_signature(self) -> None:
         """Node can use three-part signature."""
@@ -86,8 +35,7 @@ class TestNodeWithSignature:
             right: int
 
         assert MulNode._tag == "math.mul.1.0"
-        assert MulNode._signature.args == ()
-        assert MulNode._signature.kwargs == {
+        assert MulNode._signature == {
             "ns": "math",
             "name": "mul",
             "version": "1.0",
@@ -100,8 +48,7 @@ class TestNodeWithSignature:
             value: int
 
         assert ComputerNode._tag == "computer"
-        assert ComputerNode._signature.args == ()
-        assert ComputerNode._signature.kwargs == {}
+        assert ComputerNode._signature == {}
 
     def test_node_signature_with_numbers(self) -> None:
         """Node signature can include numbers."""
@@ -119,7 +66,7 @@ class TestNodeWithSignature:
 
         # Python 3.7+ dicts preserve insertion order
         assert OrderedNode._tag == "last.first.middle"
-        assert list(OrderedNode._signature.kwargs.keys()) == ["z", "a", "m"]
+        assert list(OrderedNode._signature.keys()) == ["z", "a", "m"]
 
 
 class TestNodeSchemaWithSignature:
@@ -134,8 +81,7 @@ class TestNodeSchemaWithSignature:
 
         schema = node_schema(SchemaAddNode)
         assert schema.tag == "math.add.schema"
-        assert schema.signature.args == ()
-        assert schema.signature.kwargs == {"ns": "math", "name": "add", "test": "schema"}
+        assert schema.signature == {"ns": "math", "name": "add", "test": "schema"}
 
     def test_schema_includes_multi_part_signature(self) -> None:
         """Node schema includes multi-part signature."""
@@ -146,8 +92,7 @@ class TestNodeSchemaWithSignature:
 
         schema = node_schema(SubNode)
         assert schema.tag == "calc.sub.2.0"
-        assert schema.signature.args == ()
-        assert schema.signature.kwargs == {
+        assert schema.signature == {
             "ns": "calc",
             "name": "sub",
             "version": "2.0",
@@ -161,8 +106,7 @@ class TestNodeSchemaWithSignature:
 
         schema = node_schema(AutoNode)
         assert schema.tag == "auto"
-        assert schema.signature.args == ()
-        assert schema.signature.kwargs == {}
+        assert schema.signature == {}
 
 
 class TestSignatureSerialization:
@@ -182,8 +126,7 @@ class TestSignatureSerialization:
         serialized = adapter.serialize_node_schema(schema)
 
         assert serialized["tag"] == "math.add.1.0"
-        assert serialized["signature"]["args"] == []
-        assert serialized["signature"]["kwargs"] == {
+        assert serialized["signature"] == {
             "ns": "math",
             "name": "add",
             "version": "1.0",
@@ -212,8 +155,7 @@ class TestSignatureSerialization:
 
         # Schema has signature
         schema = node_schema(TypedNode)
-        assert schema.signature.args == ()
-        assert schema.signature.kwargs == {"ns": "mylib", "name": "typed"}
+        assert schema.signature == {"ns": "mylib", "name": "typed"}
 
         # Instance does not
         instance = TypedNode(data="test")
@@ -255,7 +197,7 @@ class TestSignatureEdgeCases:
             value: int
 
         assert NumericSig._tag == "node.42.3.14"
-        assert NumericSig._signature.kwargs == {"name": "node", "major": 42, "minor": 3.14}
+        assert NumericSig._signature == {"name": "node", "major": 42, "minor": 3.14}
 
 
 class TestSignatureCollisions:

@@ -125,17 +125,17 @@ def main():
 
     math_add_schema = node_schema(MathAdd)
     print(f"MathAdd signature components:")
-    print(f"  {math_add_schema.signature.kwargs}")
+    print(f"  {math_add_schema.signature}")
     print()
 
     add_v2_schema = node_schema(AddV2)
     print(f"AddV2 signature components:")
-    print(f"  {add_v2_schema.signature.kwargs}")
+    print(f"  {add_v2_schema.signature}")
     print()
 
     custom_schema = node_schema(CustomNode)
     print(f"CustomNode signature components:")
-    print(f"  {custom_schema.signature.kwargs}")
+    print(f"  {custom_schema.signature}")
     print()
 
     # ========================================================================
@@ -188,13 +188,13 @@ def main():
     # Get all schemas
     schemas = all_schemas()
 
-    # Group by namespace (first part of signature kwargs, if present)
+    # Group by namespace (first part of signature, if present)
     by_namespace: dict[str, list[str]] = {}
 
     for tag, schema in schemas.items():
-        if schema.signature.kwargs:
+        if schema.signature:
             # Get namespace from signature if it exists
-            ns = schema.signature.kwargs.get("ns", "default")
+            ns = schema.signature.get("ns", "default")
         else:
             ns = "default"
 
@@ -236,9 +236,9 @@ def main():
     print("Frontend can display structured metadata:")
     print()
     print("Node: AddV2")
-    print(f"  Namespace: {add_v2_schema.signature.kwargs.get('ns')}")
-    print(f"  Name:      {add_v2_schema.signature.kwargs.get('name')}")
-    print(f"  Version:   {add_v2_schema.signature.kwargs.get('version')}")
+    print(f"  Namespace: {add_v2_schema.signature.get('ns')}")
+    print(f"  Name:      {add_v2_schema.signature.get('name')}")
+    print(f"  Version:   {add_v2_schema.signature.get('version')}")
     print()
     print("This allows frontends to:")
     print("  - Filter nodes by namespace")

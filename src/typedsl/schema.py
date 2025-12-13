@@ -18,7 +18,7 @@ from typing import (
     get_type_hints,
 )
 
-from typedsl.nodes import Node, Ref, Signature
+from typedsl.nodes import Node, Ref
 from typedsl.types import (
     BoolType,
     BytesType,
@@ -90,7 +90,7 @@ class NodeSchema:
     """Complete schema for a node class."""
 
     tag: str
-    signature: Signature
+    signature: dict[str, Any]  # Signature kwargs (preserves insertion order)
     type_params: tuple[TypeParameter, ...]  # Type parameter declarations
     returns: TypeDef
     fields: tuple[FieldSchema, ...]
