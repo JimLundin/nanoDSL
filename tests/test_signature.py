@@ -1,5 +1,8 @@
 """Tests for node signature composition."""
 
+import pytest
+
+from typedsl.adapters import JSONAdapter
 from typedsl.nodes import Node
 from typedsl.schema import node_schema
 from typedsl.serialization import to_dict
@@ -120,8 +123,6 @@ class TestSignatureSerialization:
             right: float
 
         schema = node_schema(MathAdd)
-        from typedsl.adapters import JSONAdapter
-
         adapter = JSONAdapter()
         serialized = adapter.serialize_node_schema(schema)
 
@@ -205,8 +206,6 @@ class TestSignatureCollisions:
 
     def test_different_signatures_same_tag_raises_error(self) -> None:
         """Different signature patterns that produce same tag raise error."""
-        import pytest
-
         class First(Node[int], ns="collision", name="test"):
             value: int
 
