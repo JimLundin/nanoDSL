@@ -19,12 +19,15 @@ class Node[T]:
     """Base for AST nodes. T is return type."""
 
     tag: ClassVar[str]
+    signature: ClassVar[dict[str, Any]]
     registry: ClassVar[dict[str, type[Node[Any]]]] = {}
 
-    def __init_subclass__(cls, tag: str | None = None) -> None:
+    def __init_subclass__(cls, **kwargs: Any) -> None:
         """Register node subclass with automatic tag derivation."""
         dataclass(frozen=True)(cls)
-        cls.tag = tag if tag is not None else cls.__name__.lower().removesuffix("node")
+
+        cls.signature = kwargs
+        cls.tag = ".".join(map(str, kwargs.values())) if kwargs else cls.__name__
 
         if (existing := Node.registry.get(cls.tag)) and existing is not cls:
             msg = (

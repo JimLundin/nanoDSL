@@ -3,11 +3,40 @@ name = "typeDSL"
 version = "0.1.0"
 description = "A type-safe node system for building ASTs and DSLs in Python 3.12+"
 readme = "README.md"
+license = { text = "Apache-2.0" }
 authors = [
     { name = "Jim Lundin", email = "JimLundin@users.noreply.github.com" },
 ]
 requires-python = ">=3.12"
 dependencies = []
+keywords = [
+    "ast",
+    "dsl",
+    "nodes",
+    "type-safe",
+    "serialization",
+    "schema",
+    "parser",
+    "compiler",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Compilers",
+    "Topic :: Software Development :: Code Generators",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/JimLundin/typeDSL"
+Repository = "https://github.com/JimLundin/typeDSL"
+Issues = "https://github.com/JimLundin/typeDSL/issues"
+Documentation = "https://github.com/JimLundin/typeDSL#readme"
 
 [build-system]
 requires = ["uv_build>=0.8.17,<0.9.0"]
@@ -48,5 +77,6 @@ ignore = [
     "PLR0911",  # multiple returns needed for type dispatch
     "PLR0912",  # multiple branches needed for type dispatch
 ]
+"src/typedsl/nodes.py" = ["ANN401"]  # __init_subclass__ accepts arbitrary **kwargs
 "src/typedsl/types.py" = ["ANN401"]  # substitute_type_params handles arbitrary type expressions
 "src/typedsl/adapters.py" = ["ANN401"]  # serialization handles arbitrary values

@@ -90,6 +90,7 @@ class NodeSchema:
     """Complete schema for a node class."""
 
     tag: str
+    signature: dict[str, Any]  # Signature kwargs (preserves insertion order)
     type_params: tuple[TypeParameter, ...]  # Type parameter declarations
     returns: TypeDef
     fields: tuple[FieldSchema, ...]
@@ -212,6 +213,7 @@ def node_schema(cls: type[Node[Any]]) -> NodeSchema:
 
     return NodeSchema(
         tag=cls.tag,
+        signature=cls.signature,
         type_params=tuple(type_params),
         returns=_extract_node_returns(cls),
         fields=tuple(node_fields),
